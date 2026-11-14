@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Instructor Hub</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Instructor">
+<meta name="theme-color" content="#2E333B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  /* Same instrument-panel look as Preflight Briefing and Client Records. */
+  :root {
+    --paper: #C8CDD2; --surface: #E3E6E9; --field: #D6DADE; --ink: #1D232A; --muted: #4F5964;
+    --rule: #A9B0B8; --accent: #22568F; --accent-bg: #C9DDF1; --accent-ink: #FFFFFF;
+    --warn: #A8321F; --warn-bg: #EBD6D1; --label: #B85A1C; --label-bg: #F1DDCB; --ok: #2F6B3A; --ok-bg: #D3E6D2;
+    --f-display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Barlow', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    --f-data: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #26292D; --surface: #31353A; --field: #282B2F; --ink: #EEF0F2; --muted: #B0B5BB;
+      --rule: #4A4F55; --accent: #B79CF0; --accent-bg: #2D2640; --accent-ink: #1E2023;
+      --warn: #FF8F7D; --warn-bg: #3A2D2A; --label: #F29A4B; --label-bg: #3A2F24; --ok: #8FD49A; --ok-bg: #263A2A; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #26292D; --surface: #31353A; --field: #282B2F; --ink: #EEF0F2; --muted: #B0B5BB;
+    --rule: #4A4F55; --accent: #B79CF0; --accent-bg: #2D2640; --accent-ink: #1E2023;
+    --warn: #FF8F7D; --warn-bg: #3A2D2A; --label: #F29A4B; --label-bg: #3A2F24; --ok: #8FD49A; --ok-bg: #263A2A; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.45;
+    padding-block: max(18px, env(safe-area-inset-top, 0px)) 44px; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .wrap > *, .panel > *, .list > *, .exrow > * { min-width: 0; }
+  @media (max-width: 480px) { .marks button { width: 40px; height: 40px; font-size: 16px; } .exhead { grid-template-columns: 40px minmax(0, 1fr); } .exhead .marks { grid-column: 1 / -1; } .seg.tabs button { font-size: 14px; padding: 0 4px; } }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .hdr-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .eyebrow { font-family: var(--f-display); font-weight: 500; font-size: 15px; text-transform: uppercase; letter-spacing: .16em; color: var(--accent); }
+  h1 { font-family: var(--f-display); font-weight: 600; margin: 0; font-size: clamp(30px, 5vw, 44px); line-height: 1.02; }
+  h2 { font-family: var(--f-display); font-weight: 600; font-size: 22px; margin: 0; text-transform: uppercase; letter-spacing: .06em; }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .btn {
+    font: inherit; font-size: 15px; font-weight: 600; padding: 0 16px; border: 1px solid var(--accent); border-radius: 4px;
+    background: transparent; color: var(--accent); cursor: pointer; min-height: 44px; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.small { min-height: 36px; padding: 0 12px; font-size: 14px; }
+  .btn.danger { border-color: var(--warn); color: var(--warn); }
+  .btn[data-armed] { background: var(--warn); color: #fff; border-color: var(--warn); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; background: var(--field); }
+  .seg button { flex: 1; min-height: 46px; padding: 0 10px; border: 0; background: transparent; color: var(--ink); font-family: var(--f-body); font-weight: 600; font-size: 16px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg.sm button { min-height: 38px; font-size: 14px; padding: 0 8px; }
+  .tabs { max-width: 760px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; min-width: 0; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tag { font-family: var(--f-display); font-weight: 500; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); background: var(--accent-bg); padding: 3px 9px; border-radius: 3px; white-space: nowrap; }
+  .tag.warn { color: var(--warn); background: var(--warn-bg); }
+  .tag.ok { color: var(--ok); background: var(--ok-bg); }
+  .tag.plain { color: var(--muted); background: var(--field); }
+  .tag.lab { color: var(--label); background: var(--label-bg); }
+  .field { display: grid; gap: 6px; margin-bottom: 12px; min-width: 0; }
+  .lbl { font-family: var(--f-display); font-weight: 500; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .in { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); color: var(--ink); padding: 0 12px; font-family: var(--f-body); font-size: 16px; }
+  textarea.in { padding: 10px 12px; min-height: 80px; resize: vertical; line-height: 1.4; }
+  .in.num, .mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+  .row2, .row3, .row4 { display: grid; gap: 0 12px; }
+  .row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .row4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 640px) { .row3, .row4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 420px) { .row2, .row3, .row4 { grid-template-columns: minmax(0, 1fr); } }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .note { font-size: 14px; color: var(--muted); margin: 4px 0 10px; }
+  .empty { padding: 18px; text-align: center; color: var(--muted); border: 1px dashed var(--rule); border-radius: 5px; }
+  .msg { min-height: 1.4em; font-size: 14px; color: var(--accent); }
+  .msg.err { color: var(--warn); }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .checks label { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--field); font-size: 15px; cursor: pointer; min-height: 40px; }
+  .checks input { width: 18px; height: 18px; accent-color: var(--accent); }
+  details.sec { border: 1px solid var(--rule); border-radius: 6px; background: var(--field); margin-bottom: 12px; }
+  details.sec > summary { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px; cursor: pointer; font-family: var(--f-display); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: 16px; list-style: none; }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  details.sec > summary::before { content: '▸'; color: var(--accent); }
+  details.sec[open] > summary::before { content: '▾'; }
+  details.sec > summary .sp { flex: 1; }
+  details.sec > .body { padding: 4px 14px 12px; }
+  details.sec .in { background: var(--surface); }
+
+  /* Today */
+  .datebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .datebar .in { width: auto; font-family: var(--f-data); }
+  .daylabel { font-family: var(--f-display); font-size: 20px; font-weight: 600; letter-spacing: .04em; }
+  .sgroup { border: 1px solid var(--rule); border-radius: 6px; background: var(--field); padding: 12px; display: grid; gap: 8px; }
+  .sgroup .shead { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sgroup .sname { font-weight: 700; font-size: 18px; cursor: pointer; background: none; border: 0; color: var(--ink); padding: 0; font-family: inherit; text-align: left; }
+  .icard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 5px; background: var(--surface); padding: 10px 12px; cursor: pointer; text-align: left; font: inherit; color: var(--ink); width: 100%; }
+  .icard.done { border-left-color: var(--ok); }
+  .icard .tm { font-family: var(--f-data); font-weight: 600; min-width: 52px; }
+  .icard .tt { font-weight: 700; }
+  .icard .sub { font-size: 14px; color: var(--muted); }
+  .icard .st { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .dot { font-size: 12px; font-family: var(--f-display); letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; background: var(--paper); color: var(--muted); white-space: nowrap; }
+  .dot.y { background: var(--ok-bg); color: var(--ok); }
+  .grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .list { display: grid; gap: 6px; }
+  .citem { text-align: left; width: 100%; border: 1px solid var(--rule); border-radius: 5px; background: var(--field); color: var(--ink); padding: 10px 12px; cursor: pointer; font: inherit; display: grid; gap: 2px; }
+  .citem[aria-current="true"] { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); background: var(--surface); }
+  .citem .nm { font-weight: 700; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .citem .sub { font-size: 14px; color: var(--muted); }
+  .rem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--rule); border-left: 4px solid var(--warn); border-radius: 5px; background: var(--field); }
+  .rem .when { font-size: 13px; color: var(--muted); font-family: var(--f-data); }
+
+  /* Flight test */
+  .ftsum { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); box-shadow: 0 6px 14px -12px rgba(0,0,0,.6); }
+  .ftsum .big { font-family: var(--f-data); font-weight: 700; font-size: 22px; }
+  .ftsum .k { font-family: var(--f-display); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .exrow { border: 1px solid var(--rule); border-radius: 6px; background: var(--field); padding: 10px 12px; display: grid; gap: 8px; }
+  .exrow.m1 { border-left: 4px solid var(--warn); }
+  .exrow.m2 { border-left: 4px solid var(--label); }
+  .exrow.m3 { border-left: 4px solid var(--accent); }
+  .exrow.m4 { border-left: 4px solid var(--ok); }
+  .exhead { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .exid { font-family: var(--f-data); font-weight: 700; font-size: 17px; }
+  .extitle { font-weight: 700; }
+  .marks { display: flex; gap: 6px; }
+  .marks button { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--rule); background: var(--surface); color: var(--ink); font-family: var(--f-data); font-weight: 700; font-size: 18px; cursor: pointer; }
+  .marks button.sug { border-style: dashed; border-color: var(--accent); }
+  .marks button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .marks button[aria-pressed="true"][data-v="1"] { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .marks button[aria-pressed="true"][data-v="2"] { background: var(--label); border-color: var(--label); color: #fff; }
+  .marks button[aria-pressed="true"][data-v="4"] { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { font: inherit; font-size: 14px; line-height: 1.25; text-align: left; padding: 7px 12px; border-radius: 16px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; max-width: 100%; }
+  .pill b { font-family: var(--f-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+  .pill.s3 { background: var(--accent-bg); border-color: var(--accent); color: var(--ink); }
+  .pill.s3 b { color: var(--accent); }
+  .pill.s2 { background: var(--label-bg); border-color: var(--label); }
+  .pill.s2 b { color: var(--label); }
+  .pill.s1 { background: var(--warn-bg); border-color: var(--warn); }
+  .pill.s1 b { color: var(--warn); }
+  .exmore { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .exmore .in { min-height: 38px; }
+  details.fm summary { cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 14px; color: var(--muted); }
+  .scale { display: grid; gap: 8px; }
+  .scale div { padding: 8px 10px; border-radius: 5px; background: var(--field); border: 1px solid var(--rule); font-size: 14px; }
+
+  .modal { position: fixed; inset: 0; background: rgba(10, 14, 20, .55); display: flex; align-items: flex-start; justify-content: center; padding: max(16px, env(safe-area-inset-top, 0px)) 10px 24px; overflow: auto; z-index: 20; }
+  .modal[hidden] { display: none; }
+  .modal-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; width: min(820px, 100%); padding: 16px; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .x { width: 44px; height: 44px; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; flex: none; }
+  .syncdot { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); display: inline-block; }
+  .syncdot.ok { background: var(--ok); } .syncdot.busy { background: var(--label); } .syncdot.err { background: var(--warn); }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 6px; font-weight: 600; z-index: 40; max-width: 90vw; }
+  .toast[hidden] { display: none; }
+  #print { display: none; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .wrap, .modal, .toast { display: none !important; }
+    #print { display: block; font-family: Arial, sans-serif; font-size: 11pt; color: #000; }
+    #print h1 { font-size: 18pt; margin: 0 0 4pt; }
+    #print h2 { font-size: 13pt; margin: 12pt 0 4pt; letter-spacing: 0; }
+    #print table { width: 100%; border-collapse: collapse; margin-top: 6pt; }
+    #print th, #print td { border: 1px solid #555; padding: 3pt 5pt; vertical-align: top; text-align: left; font-size: 10pt; }
+    #print .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2pt 16pt; font-size: 10.5pt; }
+    #print .blk { break-inside: avoid; border: 1px solid #777; padding: 6pt 8pt; margin-top: 8pt; }
+    #print .sm { font-size: 9pt; color: #333; }
+    #print .c { text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Flight Instructor Tools</div>
+      <h1>Instructor Hub</h1>
+    </div>
+    <div class="hdr-right">
+      <button class="btn small" type="button" data-act="syncNow" title="Sync"><span class="syncdot" id="syncDot"></span> <span id="syncTxt">Sync</span></button>
+      <button class="btn small" type="button" id="themeBtn">Dark</button>
+    </div>
+  </header>
+  <div class="seg tabs" role="group" aria-label="Sections">
+    <button type="button" data-act="tab" data-v="today">Today</button>
+    <button type="button" data-act="tab" data-v="students">Students</button>
+    <button type="button" data-act="tab" data-v="tests">Flight Test</button>
+    <button type="button" data-act="tab" data-v="settings">Settings</button>
+  </div>
+  <main id="view"></main>
+</div>
+<div class="modal" id="modal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-head"><h2 id="modalTitle"></h2><button class="x" type="button" data-act="closeModal" aria-label="Close">×</button></div>
+  <div id="modalBody"></div>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+<div id="print"></div>
+
+<script src="ftg-data.js"></script>
+<script>
+'use strict';
+// ======================= helpers =======================
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const isoDay = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => isoDay(new Date());
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
+const fmtDay = s => { if (!s) return ''; const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); };
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+let toastT = 0;
+const toast = t => { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600); };
+const val = id => { const e = $(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : ''; };
+
+// ======================= constants =======================
+const KINDS = ['Flight', 'Solo', 'Ground', 'Sim', 'Check ride', 'Flight test', 'Other'];
+const PROGRAMS = ['PPL', 'CPL', 'RPP', 'Instrument', 'Multi-engine', 'Instructor rating', 'Other'];
+const TESTS = {
+  rpp: { name: 'Recreational Pilot Permit', short: 'RPP', form: '26-0495E', pass: 42, guide: 'TP 12475E (03/2021)' },
+  ppl: { name: 'Private Pilot Licence', short: 'PPL', form: '26-0064E', pass: 62, guide: 'TP 13723E (03/2021)' },
+  cpl: { name: 'Commercial Pilot Licence', short: 'CPL', form: '26-0657E', pass: 93, passInt: 81, guide: 'TP 13462E (01/2021)' }
+};
+const SEV = { 3: 'Minor', 2: 'Major', 1: 'Critical' };
+// Flight management (non-technical) headings from the Flight Test Guides; available on every exercise.
+const FM = ['Problem solving / decision making', 'Situational awareness', 'Communication', 'Workload management', 'Airmanship (lookout, checklists)'];
+const SCALE = [
+  [4, 'Well executed', 'Smooth, positive handling with a high level of precision; thorough knowledge; continuous anticipation and vigilance; threats consistently anticipated and managed; safety margins maintained.'],
+  [3, 'Minor errors', 'Minor deviations; adequate knowledge to complete the task; timely response to cues; threats anticipated, errors recognized and recovered; safety margins maintained.'],
+  [2, 'Major errors', 'Major deviations and/or occasional instability, over/under control or abrupt inputs; knowledge deficiencies that do not prevent completion; cues missed or acted on late; safety margins not compromised but poorly managed.'],
+  [1, 'Critical errors / aim not achieved', 'Critical deviations, instability, rough control or control in doubt; knowledge gaps prevent completion; lapses in situational awareness; ineffective or non-compliant flight management; safety margins compromised.']
+];
+
+// ======================= settings (this device only) =======================
+const SET_KEY = 'ihSettings';
+let SET = { token: '', gistId: '', instructor: '', aircraft: 'C-GVOT, C-GVOJ, C-FLCT, C-GSFB', airport: 'CYKA', preflightUrl: 'https://macord-tech.github.io/W-B/', lastSync: 0 };
+try { Object.assign(SET, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) {}
+const saveSet = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(SET)); } catch (e) {} };
+const aircraftList = () => SET.aircraft.split(',').map(s => s.trim()).filter(Boolean);
+
+// ======================= data store (synced) =======================
+const DATA_KEY = 'ihData';
+const COLS = ['students', 'items', 'rems', 'tests'];
+let D = { students: {}, items: {}, rems: {}, tests: {}, deleted: {} };
+try { const d = JSON.parse(localStorage.getItem(DATA_KEY) || 'null'); if (d) D = Object.assign(D, d); } catch (e) {}
+COLS.concat('deleted').forEach(k => D[k] = D[k] || {});
+const persist = () => { try { localStorage.setItem(DATA_KEY, JSON.stringify(D)); } catch (e) { toast('Could not save on this device (storage full?)'); } };
+const put = (col, rec) => { rec.u = Date.now(); D[col][rec.id] = rec; persist(); queueSync(); return rec; };
+const del = (col, id) => { delete D[col][id]; D.deleted[id] = Date.now(); persist(); queueSync(); };
+const arr = col => Object.values(D[col]);
+const student = id => D.students[id];
+const sName = id => (student(id) || {}).name || '(deleted student)';
+const activeStudents = () => arr('students').filter(s => !s.archived).sort((a, b) => a.name.localeCompare(b.name));
+
+// Merge two datasets record by record: newest edit wins, deletions win over older edits.
+function merge(a, b) {
+  const out = { students: {}, items: {}, rems: {}, tests: {}, deleted: Object.assign({}, a.deleted || {}) };
+  Object.entries(b.deleted || {}).forEach(([id, t]) => { out.deleted[id] = Math.max(out.deleted[id] || 0, t); });
+  COLS.forEach(c => {
+    const ids = new Set(Object.keys(a[c] || {}).concat(Object.keys(b[c] || {})));
+    ids.forEach(id => {
+      const x = (a[c] || {})[id], y = (b[c] || {})[id];
+      const r = !x ? y : !y ? x : ((y.u || 0) > (x.u || 0) ? y : x);
+      if (out.deleted[id] && out.deleted[id] >= (r.u || 0)) return;
+      out[c][id] = r;
+    });
+  });
+  // keep tombstones for 120 days
+  const cut = Date.now() - 120 * 864e5;
+  Object.keys(out.deleted).forEach(id => { if (out.deleted[id] < cut) delete out.deleted[id]; });
+  return out;
+}
+
+// ======================= GitHub Gist sync =======================
+const GIST_FILE = 'instructor-hub.json', GIST_DESC = 'Instructor Hub data (private)';
+let syncing = false, syncAgain = false, syncTimer = 0;
+const setSyncUI = (state, txt) => { $('syncDot').className = 'syncdot ' + (state || ''); $('syncTxt').textContent = txt || 'Sync'; };
+function queueSync() { if (!SET.token) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(), 2500); }
+async function gh(method, path, body) {
+  const r = await fetch('https://api.github.com' + path, { method, cache: 'no-store', headers: { Authorization: 'Bearer ' + SET.token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error(r.status + ' ' + (r.status === 401 ? 'token not accepted' : r.status === 404 ? 'gist not found' : t.slice(0, 120))); }
+  return r.json();
+}
+async function findGist() {
+  for (let page = 1; page <= 5; page++) {
+    const list = await gh('GET', '/gists?per_page=100&page=' + page);
+    const g = list.find(x => x.files && x.files[GIST_FILE]);
+    if (g) return g.id;
+    if (list.length < 100) break;
+  }
+  return '';
+}
+async function sync(manual) {
+  if (!SET.token) { if (manual) { UI.tab = 'settings'; render(); toast('Add a GitHub token in Settings to sync'); } return; }
+  if (!navigator.onLine) { setSyncUI('err', 'Offline'); return; }
+  if (syncing) { syncAgain = true; return; }
+  syncing = true; setSyncUI('busy', 'Syncing…');
+  try {
+    if (!SET.gistId) { SET.gistId = await findGist(); saveSet(); }
+    let remote = null;
+    if (SET.gistId) {
+      const g = await gh('GET', '/gists/' + SET.gistId);
+      const f = g.files && g.files[GIST_FILE];
+      if (f) remote = JSON.parse(f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content);
+    }
+    const before = JSON.stringify(D);
+    if (remote) D = merge(D, remote);
+    const content = JSON.stringify(D);
+    if (!SET.gistId) {
+      const g = await gh('POST', '/gists', { description: GIST_DESC, public: false, files: { [GIST_FILE]: { content } } });
+      SET.gistId = g.id;
+    } else if (!remote || content !== JSON.stringify(remote)) {
+      await gh('PATCH', '/gists/' + SET.gistId, { files: { [GIST_FILE]: { content } } });
+    }
+    persist();
+    SET.lastSync = Date.now(); saveSet();
+    setSyncUI('ok', 'Synced ' + nowHM());
+    if (content !== before) { const ae = document.activeElement; if ($('modal').hidden && !(ae && $('view').contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName))) render(); }
+    if (manual) toast('Synced');
+  } catch (e) {
+    setSyncUI('err', 'Sync failed');
+    if (manual || UI.tab === 'settings') toast('Sync failed: ' + e.message);
+    console.warn(e);
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; queueSync(); }
+  }
+}
+window.addEventListener('online', () => queueSync());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+
+// ======================= UI state =======================
+const UI = { tab: 'today', day: today(), sid: null, q: '', testId: null, showArchived: false };
+try { const t = sessionStorage.getItem('ihTab'); if (t) UI.tab = t; } catch (e) {}
+
+function render() {
+  document.querySelectorAll('[data-act="tab"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === UI.tab));
+  try { sessionStorage.setItem('ihTab', UI.tab); } catch (e) {}
+  const v = $('view');
+  if (UI.tab === 'today') v.innerHTML = viewToday();
+  else if (UI.tab === 'students') v.innerHTML = viewStudents();
+  else if (UI.tab === 'tests') v.innerHTML = UI.testId && D.tests[UI.testId] ? viewTest(D.tests[UI.testId]) : viewTests();
+  else v.innerHTML = viewSettings();
+}
+
+// ======================= TODAY =======================
+const itemsOn = day => arr('items').filter(i => i.date === day).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+function itemCard(i, showName) {
+  const pre = i.pre || {}, deb = i.deb || {};
+  const st = [i.kind !== 'Ground' && i.pf && (i.pf.hobbsOut || i.pf.up) ? '<span class="dot y">Preflight</span>' : '',
+    `<span class="dot ${pre.done ? 'y' : ''}">Brief</span>`, `<span class="dot ${deb.done ? 'y' : ''}">Debrief</span>`].join('');
+  return `<button type="button" class="icard ${i.done ? 'done' : ''}" data-act="editItem" data-id="${i.id}">
+    <span class="tm">${esc(i.time || '—')}</span>
+    <span><span class="tt">${showName ? esc(sName(i.sid)) + ' · ' : ''}${esc(i.title || i.kind)}</span><br><span class="sub">${esc([i.kind, i.aircraft, i.done ? 'Completed' : ''].filter(Boolean).join(' · '))}</span></span>
+    <span class="st">${st}</span></button>`;
+}
+function viewToday() {
+  const day = UI.day, items = itemsOn(day);
+  const bySid = {};
+  items.forEach(i => (bySid[i.sid] = bySid[i.sid] || []).push(i));
+  const sids = Object.keys(bySid).sort((a, b) => sName(a).localeCompare(sName(b)));
+  const others = activeStudents().filter(s => !bySid[s.id]);
+  const groups = sids.map(sid => {
+    const open = arr('rems').filter(r => r.sid === sid && !r.resolved).length;
+    return `<div class="sgroup"><div class="shead"><button type="button" class="sname" data-act="openStudent" data-id="${sid}">${esc(sName(sid))}</button>
+      <span class="actions">${open ? `<span class="tag warn" title="Open areas for remediation">${open} to remediate</span>` : ''}<span class="tag plain">${esc((student(sid) || {}).program || '')}</span>
+      <button class="btn small" type="button" data-act="newItem" data-sid="${sid}">+ Item</button></span></div>
+      ${bySid[sid].map(i => itemCard(i)).join('')}</div>`;
+  }).join('');
+  return `<section class="panel">
+    <div class="panel-head">
+      <div class="datebar">
+        <button class="btn small" type="button" data-act="day" data-v="-1" aria-label="Previous day">‹</button>
+        <input class="in" type="date" id="dayPick" value="${esc(day)}">
+        <button class="btn small" type="button" data-act="day" data-v="1" aria-label="Next day">›</button>
+        ${day !== today() ? '<button class="btn small" type="button" data-act="day" data-v="0">Today</button>' : ''}
+      </div>
+      <div class="actions"><button class="btn small" type="button" data-act="printDay">Print day sheet</button><button class="btn small primary" type="button" data-act="newItem">+ Add item</button></div>
+    </div>
+    <div class="daylabel">${esc(fmtDay(day))}${day === today() ? ' · Today' : ''}</div>
+    <p class="note">${items.length} item${items.length === 1 ? '' : 's'} for ${sids.length} student${sids.length === 1 ? '' : 's'}. Each item carries its preflight, briefing and debrief.</p>
+    <div class="list">${groups || `<div class="empty">Nothing planned for this day.${activeStudents().length ? ' Add an item for a student below.' : ' Start by adding a student.'}</div>`}</div>
+    ${others.length ? `<h3>Add for another student</h3><div class="checks">${others.map(s => `<button type="button" class="btn small" data-act="newItem" data-sid="${s.id}">+ ${esc(s.name)}</button>`).join('')}</div>` : ''}
+    ${!activeStudents().length ? '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" data-act="newStudent">+ Add student</button></div>' : ''}
+  </section>`;
+}
+
+// ---------- item editor ----------
+function itemForm(i) {
+  const pf = i.pf || {}, pre = i.pre || {}, deb = i.deb || {};
+  const sOpts = activeStudents().concat(i.sid && student(i.sid) && student(i.sid).archived ? [student(i.sid)] : []).map(s => `<option value="${s.id}" ${s.id === i.sid ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+  const acs = aircraftList(); if (i.aircraft && !acs.includes(i.aircraft)) acs.push(i.aircraft);
+  const f = (id, label, v, extra) => `<div class="field"><label class="lbl" for="${id}">${label}</label><input class="in ${extra || ''}" id="${id}" value="${esc(v)}"></div>`;
+  const ta = (id, label, v, ph) => `<div class="field"><label class="lbl" for="${id}">${label}</label><textarea class="in" id="${id}" placeholder="${esc(ph || '')}">${esc(v)}</textarea></div>`;
+  const flt = i.kind !== 'Ground';
+  return `<form id="itemForm" data-id="${i.id || ''}">
+    <div class="row2">
+      <div class="field"><label class="lbl" for="if_sid">Student</label><select class="in" id="if_sid" required>${sOpts}</select></div>
+      <div class="field"><label class="lbl" for="if_title">Lesson / item</label><input class="in" id="if_title" value="${esc(i.title)}" placeholder="e.g. LP 8 Circuits, PSTAR review"></div>
+    </div>
+    <div class="row4">
+      <div class="field"><label class="lbl" for="if_date">Date</label><input class="in num" type="date" id="if_date" value="${esc(i.date)}" required></div>
+      <div class="field"><label class="lbl" for="if_time">Time</label><input class="in num" type="time" id="if_time" value="${esc(i.time)}"></div>
+      <div class="field"><label class="lbl" for="if_kind">Type</label><select class="in" id="if_kind">${KINDS.map(k => `<option ${k === i.kind ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+      <div class="field"><label class="lbl" for="if_ac">Aircraft</label><select class="in" id="if_ac"><option value="">—</option>${acs.map(a => `<option ${a === i.aircraft ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
+    </div>
+    <div class="checks"><label><input type="checkbox" id="if_done" ${i.done ? 'checked' : ''}> Item completed</label></div>
+
+    <details class="sec" ${flt ? '' : ''}><summary><span class="sp">Preflight</span><span class="tag plain">${esc(pf.ap || SET.airport)}</span></summary><div class="body">
+      <div class="row4">${f('pf_ap', 'Airport', pf.ap || SET.airport)}${f('pf_rwy', 'Runway', pf.rwy)}${f('pf_wind', 'Winds', pf.wind, 'num')}${f('pf_alt', 'Alt. setting', pf.alt, 'num')}</div>
+      <div class="row4">${f('pf_atis', 'ATIS', pf.atis)}${f('pf_sq', 'Squawk', pf.sq, 'num')}${f('pf_fuelL', 'Fuel L (gal)', pf.fuelL, 'num')}${f('pf_fuelR', 'Fuel R (gal)', pf.fuelR, 'num')}</div>
+      <div class="row4">${f('pf_oil', 'Oil (qt)', pf.oil, 'num')}${f('pf_hobbsOut', 'HOBBS start', pf.hobbsOut, 'num')}${f('pf_hobbsIn', 'HOBBS stop', pf.hobbsIn, 'num')}<div class="field"><span class="lbl">HOBBS time</span><output class="in num" id="pf_hobbs" style="display:flex;align-items:center;border-style:dashed;background:transparent"></output></div></div>
+      <div class="row2">
+        <div class="field"><label class="lbl" for="pf_up">Time up</label><div class="actions" style="flex-wrap:nowrap"><input class="in num" type="time" id="pf_up" value="${esc(pf.up)}"><button class="btn small" type="button" data-act="now" data-v="pf_up">Now</button></div></div>
+        <div class="field"><label class="lbl" for="pf_down">Time down</label><div class="actions" style="flex-wrap:nowrap"><input class="in num" type="time" id="pf_down" value="${esc(pf.down)}"><button class="btn small" type="button" data-act="now" data-v="pf_down">Now</button></div></div>
+      </div>
+      ${ta('pf_metar', 'METAR / TAF', pf.metar, 'Paste METAR and TAF')}
+      ${ta('pf_notam', 'NOTAM / weather notes', pf.notam)}
+      <div class="actions"><a class="btn small" href="${esc(SET.preflightUrl)}" target="_blank" rel="noopener">Open Preflight Briefing ↗</a><span class="note" style="margin:0">Full briefing card, weight &amp; balance and performance.</span></div>
+    </div></details>
+
+    <details class="sec" ${pre.done || pre.notes ? 'open' : ''}><summary><span class="sp">Pre-flight briefing</span>${pre.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
+      <div class="checks"><label><input type="checkbox" id="pr_pgi" ${pre.pgi ? 'checked' : ''}> PGI given (preparatory ground instruction)</label><label><input type="checkbox" id="pr_done" ${pre.done ? 'checked' : ''}> Pre-flight briefing done</label></div>
+      ${ta('pr_obj', 'Objectives / sequence of exercises', pre.obj)}
+      ${ta('pr_tem', 'Threats &amp; error management (weather, traffic, fatigue …)', pre.tem)}
+      ${ta('pr_notes', 'Briefing notes', pre.notes)}
+    </div></details>
+
+    <details class="sec" ${deb.done || deb.well || deb.rem ? 'open' : ''}><summary><span class="sp">Post-flight debrief</span>${deb.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
+      <div class="checks"><label><input type="checkbox" id="db_done" ${deb.done ? 'checked' : ''}> Post-flight debrief done</label></div>
+      ${ta('db_well', 'What went well', deb.well)}
+      ${ta('db_rem', 'Areas for remediation (one per line)', deb.rem, 'Each new line becomes an open remediation item for this student')}
+      <div class="field"><label class="lbl" for="db_study">Study assigned</label><input class="in" id="db_study" value="${esc(deb.study)}"></div>
+      ${ta('db_next', 'Plan for next lesson', deb.next)}
+      <div class="row2"><div class="field"><label class="lbl" for="db_nextDate">Schedule next lesson on</label><input class="in num" type="date" id="db_nextDate" value=""></div>
+      <div class="field" style="align-self:end"><button class="btn small" type="button" data-act="scheduleNext">Create next item</button></div></div>
+    </div></details>
+
+    <div class="actions">
+      <button class="btn primary" type="submit">Save</button>
+      <button class="btn" type="button" data-act="printItem">Print / PDF</button>
+      <button class="btn" type="button" data-act="mailItem">Email debrief</button>
+      ${i.id ? `<button class="btn" type="button" data-act="dupItem">Duplicate</button><button class="btn danger" type="button" data-act="delItem" data-confirm="Tap again to delete">Delete</button>` : ''}
+    </div>
+  </form>`;
+}
+function openItem(i) {
+  openModal(i.id ? 'Edit item' : 'New item', itemForm(i));
+  const calc = () => { const a = parseFloat(val('pf_hobbsOut')), b = parseFloat(val('pf_hobbsIn')); $('pf_hobbs').textContent = isFinite(a) && isFinite(b) && b >= a ? (b - a).toFixed(1) + ' h' : '—'; };
+  ['pf_hobbsOut', 'pf_hobbsIn'].forEach(id => $(id).addEventListener('input', calc)); calc();
+}
+function readItemForm() {
+  const id = $('itemForm').dataset.id;
+  const old = id ? D.items[id] : null;
+  const g = k => val(k).trim ? val(k).trim() : val(k);
+  return Object.assign({}, old || {}, {
+    id: id || uid(), sid: val('if_sid'), title: g('if_title'), date: val('if_date'), time: val('if_time'), kind: val('if_kind'), aircraft: val('if_ac'), done: val('if_done'),
+    pf: { ap: g('pf_ap'), rwy: g('pf_rwy'), wind: g('pf_wind'), alt: g('pf_alt'), atis: g('pf_atis'), sq: g('pf_sq'), fuelL: g('pf_fuelL'), fuelR: g('pf_fuelR'), oil: g('pf_oil'), hobbsOut: g('pf_hobbsOut'), hobbsIn: g('pf_hobbsIn'), up: val('pf_up'), down: val('pf_down'), metar: g('pf_metar'), notam: g('pf_notam') },
+    pre: { pgi: val('pr_pgi'), done: val('pr_done'), obj: g('pr_obj'), tem: g('pr_tem'), notes: g('pr_notes') },
+    deb: { done: val('db_done'), well: g('db_well'), rem: g('db_rem'), study: g('db_study'), next: g('db_next') }
+  });
+}
+function saveItem(rec) {
+  if (!rec.sid) { toast('Pick a student first'); return null; }
+  const old = D.items[rec.id];
+  const oldLines = new Set(((old && old.deb && old.deb.rem) || '').split('\n').map(s => s.trim()).filter(Boolean));
+  (rec.deb.rem || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(t => {
+    if (!oldLines.has(t)) put('rems', { id: uid(), sid: rec.sid, text: t, src: (rec.title || rec.kind) + ' · ' + rec.date, opened: today(), by: SET.instructor, resolved: false });
+  });
+  return put('items', rec);
+}
+function itemText(i) {
+  const s = student(i.sid) || {}, pf = i.pf || {}, pre = i.pre || {}, deb = i.deb || {};
+  const L = [`${s.name || ''} — ${i.title || i.kind}`, `${fmtDay(i.date)}${i.time ? ' ' + i.time : ''} · ${i.kind}${i.aircraft ? ' · ' + i.aircraft : ''}`];
+  const hob = parseFloat(pf.hobbsIn) - parseFloat(pf.hobbsOut);
+  if (isFinite(hob) && hob >= 0) L.push(`HOBBS ${pf.hobbsOut}–${pf.hobbsIn} (${hob.toFixed(1)} h)`);
+  if (pre.obj) L.push('', 'OBJECTIVES', pre.obj);
+  if (pre.tem) L.push('', 'THREATS & ERRORS', pre.tem);
+  if (deb.well) L.push('', 'WHAT WENT WELL', deb.well);
+  if (deb.rem) L.push('', 'AREAS FOR REMEDIATION', deb.rem);
+  if (deb.study) L.push('', 'STUDY ASSIGNED', deb.study);
+  if (deb.next) L.push('', 'PLAN FOR NEXT LESSON', deb.next);
+  if (SET.instructor) L.push('', '— ' + SET.instructor);
+  return L.join('\n');
+}
+function printItem(i) {
+  const s = student(i.sid) || {}, pf = i.pf || {}, pre = i.pre || {}, deb = i.deb || {};
+  const row = (k, v) => v ? `<tr><th style="width:28%">${esc(k)}</th><td style="white-space:pre-wrap">${esc(v)}</td></tr>` : '';
+  const hob = parseFloat(pf.hobbsIn) - parseFloat(pf.hobbsOut);
+  doPrint(`<h1>${esc(i.title || i.kind)}</h1>
+    <div class="meta"><div><b>Student:</b> ${esc(s.name)}</div><div><b>Date:</b> ${esc(fmtDay(i.date))} ${esc(i.time || '')}</div><div><b>Type:</b> ${esc(i.kind)}</div><div><b>Aircraft:</b> ${esc(i.aircraft || '—')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div><div><b>Status:</b> ${i.done ? 'Completed' : 'Planned'}</div></div>
+    <h2>Preflight</h2><table>${row('Airport / runway', [pf.ap, pf.rwy].filter(Boolean).join(' / '))}${row('Winds / altimeter', [pf.wind, pf.alt].filter(Boolean).join(' / '))}${row('ATIS / squawk', [pf.atis, pf.sq].filter(Boolean).join(' / '))}${row('Fuel L / R · oil', [pf.fuelL, pf.fuelR].filter(Boolean).join(' / ') + (pf.oil ? ' gal · ' + pf.oil + ' qt' : ''))}${row('HOBBS', pf.hobbsOut || pf.hobbsIn ? `${pf.hobbsOut || ''} – ${pf.hobbsIn || ''}${isFinite(hob) && hob >= 0 ? ' (' + hob.toFixed(1) + ' h)' : ''}` : '')}${row('Time up / down', [pf.up, pf.down].filter(Boolean).join(' – '))}${row('METAR / TAF', pf.metar)}${row('NOTAM / notes', pf.notam)}</table>
+    <h2>Pre-flight briefing</h2><table>${row('Completed', [pre.pgi && 'PGI given', pre.done && 'Pre-flight briefing done'].filter(Boolean).join(' · ') || '—')}${row('Objectives', pre.obj)}${row('Threats & errors', pre.tem)}${row('Notes', pre.notes)}</table>
+    <h2>Post-flight debrief</h2><table>${row('Completed', deb.done ? 'Debrief done' : '—')}${row('What went well', deb.well)}${row('Areas for remediation', deb.rem)}${row('Study assigned', deb.study)}${row('Plan for next lesson', deb.next)}</table>`);
+}
+function printDay() {
+  const items = itemsOn(UI.day);
+  doPrint(`<h1>Day sheet · ${esc(fmtDay(UI.day))}</h1><div class="sm">${esc(SET.instructor || '')}</div>
+    <table><tr><th>Time</th><th>Student</th><th>Item</th><th>Type / aircraft</th><th class="c">Brief</th><th class="c">Debrief</th><th>Notes</th></tr>
+    ${items.map(i => `<tr><td>${esc(i.time || '')}</td><td>${esc(sName(i.sid))}</td><td>${esc(i.title || '')}</td><td>${esc([i.kind, i.aircraft].filter(Boolean).join(' · '))}</td><td class="c">${i.pre && i.pre.done ? '✓' : '☐'}</td><td class="c">${i.deb && i.deb.done ? '✓' : '☐'}</td><td style="white-space:pre-wrap">${esc((i.pre && i.pre.obj) || '')}</td></tr>`).join('') || '<tr><td colspan="7">No items</td></tr>'}</table>`);
+}
+function doPrint(html) { $('print').innerHTML = html; setTimeout(() => window.print(), 50); }
+
+// ======================= STUDENTS =======================
+function viewStudents() {
+  const q = UI.q.toLowerCase();
+  const list = arr('students').filter(s => (UI.showArchived || !s.archived) && (!q || s.name.toLowerCase().includes(q))).sort((a, b) => a.name.localeCompare(b.name));
+  if (UI.sid && !D.students[UI.sid]) UI.sid = null;
+  const s = UI.sid ? D.students[UI.sid] : null;
+  return `<div class="grid">
+    <section class="panel"><div class="panel-head"><h2>Students</h2><button class="btn small primary" type="button" data-act="newStudent">+ Add</button></div>
+      <div class="field"><input class="in" id="sq" type="search" placeholder="Search" value="${esc(UI.q)}" aria-label="Search students"></div>
+      <div class="list">${list.map(x => {
+        const open = arr('rems').filter(r => r.sid === x.id && !r.resolved).length;
+        return `<button type="button" class="citem" data-act="openStudent" data-id="${x.id}" aria-current="${x.id === UI.sid}"><span class="nm">${esc(x.name)} <span class="tag plain">${esc(x.program || '')}</span></span><span class="sub">${x.archived ? 'Archived · ' : ''}${open ? open + ' open remediation item' + (open === 1 ? '' : 's') : 'No open items'}</span></button>`;
+      }).join('') || '<div class="empty">No students yet.</div>'}</div>
+      <div class="checks" style="margin-top:12px"><label><input type="checkbox" id="showArch" ${UI.showArchived ? 'checked' : ''}> Show archived</label></div>
+    </section>
+    <section class="panel">${s ? studentDetail(s) : '<div class="empty">Select a student, or add one. Students sync to your other devices.</div>'}</section>
+  </div>`;
+}
+function studentDetail(s) {
+  const rems = arr('rems').filter(r => r.sid === s.id);
+  const open = rems.filter(r => !r.resolved).sort((a, b) => (a.opened || '').localeCompare(b.opened || ''));
+  const done = rems.filter(r => r.resolved).sort((a, b) => (b.resolvedAt || '').localeCompare(a.resolvedAt || ''));
+  const items = arr('items').filter(i => i.sid === s.id).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+  const up = items.filter(i => i.date >= today()).reverse(), past = items.filter(i => i.date < today());
+  const tests = arr('tests').filter(t => t.sid === s.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return `<div class="panel-head"><div><h2>${esc(s.name)}</h2><div class="note" style="margin:2px 0 0">${esc([s.program, s.phone, s.email].filter(Boolean).join(' · '))}</div></div>
+      <div class="actions"><button class="btn small" type="button" data-act="editStudent" data-id="${s.id}">Edit</button><button class="btn small" type="button" data-act="newTest" data-sid="${s.id}">+ Flight test</button><button class="btn small primary" type="button" data-act="newItem" data-sid="${s.id}">+ Item</button></div></div>
+    ${s.notes ? `<p style="white-space:pre-wrap;margin:0 0 10px">${esc(s.notes)}</p>` : ''}
+    <h3>Areas for remediation (${open.length})</h3>
+    <div class="list">${open.map(r => `<div class="rem"><span>${esc(r.text)}<br><span class="when">${esc([r.src, r.opened && 'opened ' + r.opened, r.by].filter(Boolean).join(' · '))}</span></span><button class="btn small" type="button" data-act="resolveRem" data-id="${r.id}">Resolve</button></div>`).join('') || '<div class="empty">None open.</div>'}</div>
+    <div class="actions" style="margin-top:8px"><input class="in" id="newRem" placeholder="Add an item to remediate" style="flex:1;min-width:180px"><button class="btn small" type="button" data-act="addRem" data-id="${s.id}">Add</button></div>
+    ${done.length ? `<details class="sec" style="margin-top:12px"><summary><span class="sp">Resolved (${done.length})</span></summary><div class="body list">${done.map(r => `<div class="rem" style="border-left-color:var(--ok)"><span>${esc(r.text)}<br><span class="when">opened ${esc(r.opened || '')} · resolved ${esc(r.resolvedAt || '')}${r.resolvedBy ? ' by ' + esc(r.resolvedBy) : ''}</span></span><button class="btn small" type="button" data-act="reopenRem" data-id="${r.id}">Reopen</button></div>`).join('')}</div></details>` : ''}
+    <h3>Upcoming</h3><div class="list">${up.map(i => itemCard(i).replace('<span class="tm">' + esc(i.time || '—'), '<span class="tm">' + esc(i.date.slice(5)) + '<br>' + esc(i.time || ''))).join('') || '<div class="empty">Nothing scheduled.</div>'}</div>
+    <h3>Flight tests</h3><div class="list">${tests.map(t => testCardHTML(t)).join('') || '<div class="empty">No flight test sheets yet.</div>'}</div>
+    <h3>History (${past.length})</h3><div class="list">${past.slice(0, 40).map(i => itemCard(i).replace('<span class="tm">' + esc(i.time || '—'), '<span class="tm">' + esc(i.date.slice(2)))).join('') || '<div class="empty">No past items.</div>'}</div>`;
+}
+function studentForm(s) {
+  return `<form id="studentForm" data-id="${s.id || ''}">
+    <div class="row2"><div class="field"><label class="lbl" for="sf_name">Name</label><input class="in" id="sf_name" required value="${esc(s.name)}"></div>
+    <div class="field"><label class="lbl" for="sf_prog">Program</label><select class="in" id="sf_prog">${PROGRAMS.map(p => `<option ${p === s.program ? 'selected' : ''}>${p}</option>`).join('')}</select></div></div>
+    <div class="row2"><div class="field"><label class="lbl" for="sf_phone">Phone</label><input class="in" id="sf_phone" type="tel" value="${esc(s.phone)}"></div>
+    <div class="field"><label class="lbl" for="sf_email">Email</label><input class="in" id="sf_email" type="email" value="${esc(s.email)}"></div></div>
+    <div class="field"><label class="lbl" for="sf_notes">Notes</label><textarea class="in" id="sf_notes">${esc(s.notes)}</textarea></div>
+    <div class="checks"><label><input type="checkbox" id="sf_arch" ${s.archived ? 'checked' : ''}> Archived (finished / inactive)</label></div>
+    <div class="actions"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="closeModal">Cancel</button>
+    ${s.id ? '<button class="btn danger" type="button" data-act="delStudent" data-confirm="Tap again: deletes the student and all their items">Delete</button>' : ''}</div></form>`;
+}
+
+// ======================= FLIGHT TESTS =======================
+function testDef(t) { return FTG[t.kind] || []; }
+function exVariant(t, ex) { const m = (t.marks || {})[ex.id] || {}; return ex.v[Math.min(m.v || 0, ex.v.length - 1)] || ex.v[0]; }
+function exState(t, ex) { return (t.marks || {})[ex.id] || {}; }
+function suggested(m) {
+  const sev = Object.values(m.p || {}).concat(Object.values(m.fm || {})).filter(Boolean);
+  return sev.length ? Math.min.apply(null, sev) : 0;
+}
+function testResult(t) {
+  const exs = testDef(t), T = TESTS[t.kind];
+  let total = 0, marked = 0;
+  const failG = [], failA = [];
+  exs.forEach(ex => {
+    const m = exState(t, ex).m;
+    if (m) { total += m; marked++; if (m === 1) (ex.ground ? failG : failA).push(ex.id); }
+  });
+  const max = exs.length * 4, need = t.kind === 'cpl' && t.integrated ? T.passInt : T.pass;
+  const complete = marked === exs.length;
+  let status = 'In progress', cls = 'plain', detail = '';
+  if (failG.length) { status = 'Fail'; cls = 'warn'; detail = 'Ground item failed (' + failG.join(', ') + '): complete re-test required.'; }
+  else if (failA.length >= 3) { status = 'Fail'; cls = 'warn'; detail = failA.length + ' air items failed (' + failA.join(', ') + '): complete re-test required.'; }
+  else if (failA.length) { status = 'Fail'; cls = 'warn'; detail = 'Air item' + (failA.length > 1 ? 's' : '') + ' failed (' + failA.join(', ') + '): partial flight test required' + (complete && !t.partial && total < need ? '' : '') + '.'; }
+  if (complete && !t.partial && total < need) { status = 'Fail'; cls = 'warn'; detail = (detail ? detail + ' ' : '') + 'Total ' + total + ' is below the pass mark of ' + need + ': complete re-test required.'; }
+  if (complete && status === 'In progress') { status = 'Pass'; cls = 'ok'; detail = t.partial ? 'All re-tested items passed.' : 'Total ' + total + ' meets the pass mark of ' + need + '.'; }
+  if (!complete && status === 'In progress') detail = (exs.length - marked) + ' of ' + exs.length + ' items still to mark.';
+  return { total, marked, max, need, status, cls, detail, failG, failA, count: exs.length };
+}
+function testCardHTML(t) {
+  const r = testResult(t), T = TESTS[t.kind];
+  return `<button type="button" class="citem" data-act="openTest" data-id="${t.id}"><span class="nm">${esc(sName(t.sid))} · ${esc(T.short)}${t.integrated ? ' (Int.)' : ''}${t.partial ? ' partial' : ''} <span class="tag ${r.cls}">${esc(r.status)}</span></span>
+    <span class="sub">${esc(t.date || '')} · ${esc(t.mode || 'Mock')} · ${r.total} / ${r.marked * 4} marked${t.aircraft ? ' · ' + esc(t.aircraft) : ''}</span></button>`;
+}
+function viewTests() {
+  const tests = arr('tests').sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.u - a.u));
+  return `<section class="panel"><div class="panel-head"><h2>Flight test marking</h2><button class="btn small primary" type="button" data-act="newTest">+ New marking sheet</button></div>
+    <p class="note">Mark a mock (pre-test) or an observed flight test against the Transport Canada flight test report. Each exercise shows the Performance Criteria from the Flight Test Guide as pills: tap once for a <b>minor</b> deviation, twice for <b>major</b>, three times for <b>critical</b>, four times to clear. The app suggests the mark from the weakest element; you choose the mark.</p>
+    <div class="list">${tests.map(testCardHTML).join('') || '<div class="empty">No marking sheets yet.</div>'}</div>
+    <details class="sec" style="margin-top:14px"><summary><span class="sp">4-point marking scale</span></summary><div class="body scale">${SCALE.map(s => `<div><b>${s[0]} · ${s[1]}.</b> ${esc(s[2])}</div>`).join('')}
+      <div><b>Deviations.</b> Minor: within the specified limit. Major: exceeds a limit, or repeated minor deviations without regaining stability. Critical: a major deviation that is repeated, excessive or uncorrected, or more than double the limit.</div>
+      <div><b>Results.</b> Failing any item, or a total below the pass mark, fails the test. A failed ground item, three or more failed air items, or a total below the pass mark requires a complete re-test; one or two failed air items require a partial test.</div></div></details>
+  </section>`;
+}
+function testSetupForm(t) {
+  const acs = aircraftList();
+  return `<form id="testForm" data-id="${t.id || ''}">
+    <div class="row2"><div class="field"><label class="lbl" for="tf_sid">Student</label><select class="in" id="tf_sid" required>${activeStudents().map(s => `<option value="${s.id}" ${s.id === t.sid ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+    <div class="field"><label class="lbl" for="tf_kind">Flight test</label><select class="in" id="tf_kind" ${t.id ? 'disabled' : ''}>${Object.entries(TESTS).map(([k, v]) => `<option value="${k}" ${k === t.kind ? 'selected' : ''}>${v.name}</option>`).join('')}</select></div></div>
+    <div class="row3"><div class="field"><label class="lbl" for="tf_date">Date</label><input class="in num" type="date" id="tf_date" value="${esc(t.date)}"></div>
+    <div class="field"><label class="lbl" for="tf_mode">Type</label><select class="in" id="tf_mode">${['Mock / pre-test', 'Flight test (observed)'].map(m => `<option ${m === t.mode ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+    <div class="field"><label class="lbl" for="tf_ac">Aircraft</label><select class="in" id="tf_ac"><option value="">—</option>${acs.map(a => `<option ${a === t.aircraft ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div></div>
+    <div class="row2"><div class="field"><label class="lbl" for="tf_exam">Examiner / assessor</label><input class="in" id="tf_exam" value="${esc(t.examiner || SET.instructor)}"></div>
+    <div class="field"><label class="lbl" for="tf_loc">Location</label><input class="in" id="tf_loc" value="${esc(t.loc || SET.airport)}"></div></div>
+    <div class="checks"><label><input type="checkbox" id="tf_partial" ${t.partial ? 'checked' : ''}> Partial test</label><label><input type="checkbox" id="tf_int" ${t.integrated ? 'checked' : ''}> Integrated commercial course (pass mark 81)</label></div>
+    <div class="field"><label class="lbl" for="tf_wx">Weather conditions</label><input class="in" id="tf_wx" value="${esc(t.wx)}"></div>
+    <div class="actions"><button class="btn primary" type="submit">${t.id ? 'Save' : 'Start marking'}</button><button class="btn" type="button" data-act="closeModal">Cancel</button>
+    ${t.id ? '<button class="btn danger" type="button" data-act="delTest" data-confirm="Tap again to delete this sheet">Delete sheet</button>' : ''}</div></form>`;
+}
+function exRowHTML(t, ex) {
+  const m = exState(t, ex), v = exVariant(t, ex), sug = suggested(m), mk = m.m || 0;
+  const pills = v.pills.map((p, i) => { const s = (m.p || {})[i] || 0; return `<button type="button" class="pill ${s ? 's' + s : ''}" data-act="pill" data-ex="${ex.id}" data-i="${i}" title="${esc(p.f)}">${s ? '<b>' + SEV[s] + '</b>' : ''}${esc(p.t)}</button>`; }).join('');
+  const fm = FM.map((p, i) => { const s = (m.fm || {})[i] || 0; return `<button type="button" class="pill ${s ? 's' + s : ''}" data-act="fm" data-ex="${ex.id}" data-i="${i}">${s ? '<b>' + SEV[s] + '</b>' : ''}${esc(p)}</button>`; }).join('');
+  const fmOn = Object.values(m.fm || {}).some(Boolean);
+  return `<div class="exrow ${mk ? 'm' + mk : ''}" id="ex_${ex.id.replace('.', '_')}">
+    <div class="exhead"><span class="exid">${esc(ex.id)}</span><span><span class="extitle">${esc(ex.title)}</span> ${ex.ground ? '<span class="tag plain">Ground</span>' : ''}${sug && sug !== mk ? ` <span class="tag lab">Suggests ${sug}</span>` : ''}</span>
+      <span class="marks" role="group" aria-label="Mark for ${esc(ex.id)}">${[1, 2, 3, 4].map(n => `<button type="button" data-act="mark" data-ex="${ex.id}" data-v="${n}" aria-pressed="${mk === n}" class="${!mk && sug === n ? 'sug' : ''}">${n}</button>`).join('')}</span></div>
+    ${ex.v.length > 1 ? `<div class="seg sm" style="max-width:420px">${ex.v.map((x, i) => `<button type="button" data-act="variant" data-ex="${ex.id}" data-v="${i}" aria-pressed="${(m.v || 0) === i}">${esc(/soft/i.test(x.label) ? 'Soft field' : 'Short field')}</button>`).join('')}</div>` : ''}
+    ${v.choices ? `<div class="exmore"><label class="lbl" for="ch_${ex.id}">Emergency</label><select class="in" id="ch_${ex.id}" data-ch="${ex.id}" style="width:auto;max-width:100%"><option value="">— select —</option>${v.choices.map(c => `<option ${c === m.ch ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
+    <div class="pills">${pills}</div>
+    <details class="fm" ${fmOn ? 'open' : ''}><summary>Flight management</summary><div class="pills">${fm}</div></details>
+    <div class="exmore"><input class="in" data-rmk="${ex.id}" placeholder="Remarks" value="${esc(m.r)}" style="flex:1;min-width:200px"></div>
+  </div>`;
+}
+function viewTest(t) {
+  const T = TESTS[t.kind], r = testResult(t);
+  return `<section class="panel" style="display:grid;gap:10px">
+    <div class="panel-head" style="margin:0"><div><button class="btn small" type="button" data-act="backTests">‹ All sheets</button></div>
+      <div class="actions"><button class="btn small" type="button" data-act="editTest">Details</button><button class="btn small" type="button" data-act="toRem">Send to remediation</button><button class="btn small" type="button" data-act="mailTest">Email</button><button class="btn small primary" type="button" data-act="printTest">Print report</button></div></div>
+    <div><h2>${esc(T.name)}${t.integrated ? ' · Integrated' : ''}${t.partial ? ' · Partial' : ''}</h2>
+      <div class="note" style="margin:2px 0 0">${esc([sName(t.sid), fmtDay(t.date), t.mode, t.aircraft, t.examiner].filter(Boolean).join(' · '))} · Performance criteria: ${esc(T.guide)}</div></div>
+    <div class="ftsum" id="ftsum">${sumHTML(t, r)}</div>
+    <div class="legend"><span>Tap a pill:</span><span class="pill s3"><b>Minor</b>→3</span><span class="pill s2"><b>Major</b>→2</span><span class="pill s1"><b>Critical</b>→1</span><span>Long text? Hover or press-and-hold to read the full criterion.</span></div>
+    <div class="list" id="exlist">${testDef(t).map(ex => exRowHTML(t, ex)).join('')}</div>
+    <div class="field"><label class="lbl" for="tnotes">General remarks</label><textarea class="in" id="tnotes" data-tnotes="1">${esc(t.notes)}</textarea></div>
+  </section>`;
+}
+function sumHTML(t, r) {
+  return `<div><div class="k">Total</div><div class="big">${r.total}<span style="font-size:15px;color:var(--muted)"> / ${r.max}</span></div></div>
+    <div><div class="k">Pass mark</div><div class="big">${t.partial ? '—' : r.need}</div></div>
+    <div><div class="k">Marked</div><div class="big">${r.marked}<span style="font-size:15px;color:var(--muted)"> / ${r.count}</span></div></div>
+    <div style="flex:1;min-width:200px"><span class="tag ${r.cls}">${esc(r.status)}</span> <span style="font-size:14px">${esc(r.detail)}</span></div>`;
+}
+function refreshEx(t, exId) {
+  const ex = testDef(t).find(e => e.id === exId), el = $('ex_' + exId.replace('.', '_'));
+  if (ex && el) { const open = el.querySelector('details.fm') && el.querySelector('details.fm').open; el.outerHTML = exRowHTML(t, ex); if (open) $('ex_' + exId.replace('.', '_')).querySelector('details.fm').open = true; }
+  $('ftsum').innerHTML = sumHTML(t, testResult(t));
+}
+function devLines(t, ex) {
+  const m = exState(t, ex), v = exVariant(t, ex), out = [];
+  Object.entries(m.p || {}).forEach(([i, s]) => { if (s && v.pills[i]) out.push({ s, t: v.pills[i].t, f: v.pills[i].f }); });
+  Object.entries(m.fm || {}).forEach(([i, s]) => { if (s && FM[i]) out.push({ s, t: FM[i], f: FM[i] }); });
+  return out.sort((a, b) => a.s - b.s);
+}
+function testText(t) {
+  const T = TESTS[t.kind], r = testResult(t);
+  const L = [`${T.name} flight test${t.partial ? ' (partial)' : ''} — ${sName(t.sid)}`, `${fmtDay(t.date)} · ${t.mode || ''}${t.aircraft ? ' · ' + t.aircraft : ''}`, `Result: ${r.status}. ${r.detail}`, `Total ${r.total} / ${r.max}${t.partial ? '' : ' (pass mark ' + r.need + ')'}`, ''];
+  testDef(t).forEach(ex => {
+    const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
+    if (!m.m && !d.length && !m.r) return;
+    L.push(`${ex.id} ${ex.title}${ex.v.length > 1 ? ' (' + (/soft/i.test(v.label) ? 'soft' : 'short') + ')' : ''}${m.ch ? ' — ' + m.ch : ''}: ${m.m || '–'}`);
+    d.forEach(x => L.push(`   • ${SEV[x.s]}: ${x.t}`));
+    if (m.r) L.push('   ' + m.r);
+  });
+  if (t.notes) L.push('', t.notes);
+  if (SET.instructor) L.push('', '— ' + SET.instructor);
+  return L.join('\n');
+}
+function printTest(t) {
+  const T = TESTS[t.kind], r = testResult(t);
+  doPrint(`<h1>Flight Test Report · ${esc(T.name)} (Aeroplane)</h1>
+    <div class="sm">${t.mode && /mock/i.test(t.mode) ? 'Mock / pre-test assessment — not a Transport Canada form. ' : ''}Marked against TC form ${esc(T.form)} and Flight Test Guide ${esc(T.guide)}.</div>
+    <div class="meta" style="margin-top:6pt"><div><b>Applicant:</b> ${esc(sName(t.sid))}</div><div><b>Date:</b> ${esc(fmtDay(t.date))}</div><div><b>Assessor:</b> ${esc(t.examiner || '')}</div><div><b>Location:</b> ${esc(t.loc || '')}</div>
+    <div><b>Aircraft:</b> ${esc(t.aircraft || '')}</div><div><b>Test:</b> ${esc(T.short)}${t.integrated ? ' integrated' : ''}${t.partial ? ' · partial' : ''} · ${esc(t.mode || '')}</div><div><b>Weather:</b> ${esc(t.wx || '')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div></div>
+    <table><tr><th style="width:9%">Ex.</th><th style="width:30%">Exercise</th><th class="c" style="width:7%">Mark</th><th>Remarks / deviations from the Performance Criteria</th></tr>
+    ${testDef(t).map(ex => { const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
+      return `<tr><td>${esc(ex.id)}</td><td>${esc(ex.title)}${ex.v.length > 1 ? ' — ' + (/soft/i.test(v.label) ? 'soft field' : 'short field') : ''}${m.ch ? '<br><span class="sm">' + esc(m.ch) + '</span>' : ''}</td><td class="c"><b>${m.m || ''}</b></td>
+      <td>${d.map(x => `<div><b>${SEV[x.s]}:</b> ${esc(x.t)}</div>`).join('')}${m.r ? `<div><i>${esc(m.r)}</i></div>` : ''}</td></tr>`; }).join('')}
+    </table>
+    <div class="blk"><b>Final assessment:</b> ${esc(r.status)} — total ${r.total} / ${r.max}${t.partial ? '' : ', mark required ' + r.need}. ${esc(r.detail)}</div>
+    ${t.notes ? `<div class="blk" style="white-space:pre-wrap"><b>General remarks:</b><br>${esc(t.notes)}</div>` : ''}`);
+}
+
+// ======================= SETTINGS =======================
+function viewSettings() {
+  const counts = COLS.map(c => Object.keys(D[c]).length);
+  return `<section class="panel" style="max-width:820px">
+    <h2>Settings</h2>
+    <h3>You</h3>
+    <div class="row2"><div class="field"><label class="lbl" for="st_inst">Instructor name</label><input class="in" id="st_inst" value="${esc(SET.instructor)}" data-set="instructor"></div>
+    <div class="field"><label class="lbl" for="st_ap">Home airport</label><input class="in" id="st_ap" value="${esc(SET.airport)}" data-set="airport"></div></div>
+    <div class="field"><label class="lbl" for="st_ac">Aircraft (comma separated)</label><input class="in" id="st_ac" value="${esc(SET.aircraft)}" data-set="aircraft"></div>
+    <div class="field"><label class="lbl" for="st_pf">Preflight Briefing address</label><input class="in" id="st_pf" value="${esc(SET.preflightUrl)}" data-set="preflightUrl"></div>
+    <h3>Sync between your devices</h3>
+    <p class="note">Your students, items and marking sheets are kept on this device and copied to a <b>secret GitHub Gist</b> in your account, so your iPad, phone and desktop all see the same list. It works offline and catches up when you are back online. Nobody else can see a secret gist unless you share its link.</p>
+    <details class="sec"><summary><span class="sp">How to get a token (once per device)</span></summary><div class="body">
+      <ol style="margin:0;padding-left:20px">
+        <li>On github.com go to <b>Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token</b>.</li>
+        <li>Name it “Instructor Hub”, set an expiry you are happy with, and under <b>Account permissions</b> set <b>Gists</b> to <b>Read and write</b>. No repository access is needed.</li>
+        <li>Generate, copy the token and paste it below. Use the same token (or a new one) on each device; the app finds your data gist automatically.</li>
+      </ol></div></details>
+    <div class="field"><label class="lbl" for="st_tok">GitHub token</label><input class="in" id="st_tok" type="password" autocomplete="off" value="${esc(SET.token)}" placeholder="github_pat_…"></div>
+    <div class="actions"><button class="btn primary" type="button" data-act="saveToken">Save token &amp; sync</button>${SET.token ? '<button class="btn" type="button" data-act="syncNow">Sync now</button><button class="btn danger" type="button" data-act="forgetToken" data-confirm="Tap again: stop syncing on this device">Stop syncing here</button>' : ''}</div>
+    <p class="note">${SET.gistId ? 'Data gist: <span class="mono">' + esc(SET.gistId) + '</span>' : 'No data gist yet — it is created on the first sync.'}${SET.lastSync ? ' · last synced ' + esc(new Date(SET.lastSync).toLocaleString()) : ''}</p>
+    <h3>Backup</h3>
+    <p class="note">On this device: ${counts[0]} students, ${counts[1]} items, ${counts[2]} remediation items, ${counts[3]} marking sheets.</p>
+    <div class="actions"><button class="btn" type="button" data-act="exportData">Export backup (.json)</button><label class="btn" for="importFile">Import backup</label><input type="file" id="importFile" accept="application/json,.json" hidden></div>
+    <h3>About</h3>
+    <p class="note">Flight test exercises follow the TC flight test reports (RPP 26-0495E, PPL 26-0064E, CPL 26-0657E). Deviation pills are the Performance Criteria of the Flight Test Guides: RPP TP 12475E (03/2021), PPL TP 13723E (03/2021), CPL TP 13462E (01/2021). Training aid only — the Flight Test Guide and the examiner’s assessment govern.</p>
+  </section>`;
+}
+
+// ======================= modal =======================
+function openModal(title, html) { $('modalTitle').textContent = title; $('modalBody').innerHTML = html; $('modal').hidden = false; $('modal').scrollTop = 0; }
+function closeModal() { $('modal').hidden = true; $('modalBody').innerHTML = ''; }
+
+// ======================= events =======================
+function armed(btn) {
+  if (!btn.dataset.confirm) return true;
+  if (btn.dataset.armed) return true;
+  btn.dataset.armed = '1'; btn.dataset.orig = btn.textContent; btn.textContent = btn.dataset.confirm;
+  setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = btn.dataset.orig; } }, 3500);
+  return false;
+}
+function cycle(obj, i) { const s = obj[i] || 0; const n = s === 0 ? 3 : s === 3 ? 2 : s === 2 ? 1 : 0; if (n) obj[i] = n; else delete obj[i]; }
+function curTest() { return D.tests[UI.testId]; }
+function saveTest(t) { put('tests', t); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act;
+  if (!armed(b)) return;
+  const id = b.dataset.id;
+  switch (a) {
+    case 'tab': UI.tab = b.dataset.v; if (UI.tab === 'tests') UI.testId = null; render(); window.scrollTo(0, 0); break;
+    case 'closeModal': closeModal(); break;
+    case 'day': UI.day = b.dataset.v === '0' ? today() : addDays(UI.day, +b.dataset.v); render(); break;
+    case 'newItem': {
+      if (!activeStudents().length) { openModal('New student', studentForm({ program: 'PPL' })); break; }
+      openItem({ sid: b.dataset.sid || (UI.tab === 'students' && UI.sid) || activeStudents()[0].id, date: UI.tab === 'today' ? UI.day : today(), kind: 'Flight', aircraft: '' }); break;
+    }
+    case 'editItem': openItem(D.items[id]); break;
+    case 'now': $(b.dataset.v).value = nowHM(); break;
+    case 'dupItem': { const r = readItemForm(); openItem(Object.assign({}, r, { id: '', date: today(), done: false, pre: {}, deb: {}, pf: { ap: r.pf.ap } })); break; }
+    case 'delItem': { const fid = $('itemForm').dataset.id; del('items', fid); closeModal(); render(); toast('Item deleted'); break; }
+    case 'printItem': printItem(readItemForm()); break;
+    case 'mailItem': { const r = readItemForm(), s = student(r.sid) || {}; location.href = 'mailto:' + encodeURIComponent(s.email || '') + '?subject=' + encodeURIComponent('Debrief: ' + (r.title || r.kind) + ' ' + r.date) + '&body=' + encodeURIComponent(itemText(r)); break; }
+    case 'scheduleNext': {
+      const r = readItemForm(); const d = val('db_nextDate');
+      if (!d) { toast('Pick a date for the next lesson'); break; }
+      if (!saveItem(r)) break;
+      put('items', { id: uid(), sid: r.sid, date: d, time: '', kind: r.kind === 'Ground' ? 'Ground' : 'Flight', aircraft: r.aircraft, title: (r.deb.next || '').split('\n')[0].slice(0, 80) || 'Next lesson', done: false, pf: { ap: r.pf.ap }, pre: { obj: r.deb.next || '' }, deb: {} });
+      closeModal(); render(); toast('Saved, and next lesson added for ' + fmtDay(d)); break;
+    }
+    case 'printDay': printDay(); break;
+    case 'newStudent': openModal('New student', studentForm({ program: 'PPL' })); break;
+    case 'editStudent': openModal('Edit student', studentForm(D.students[id])); break;
+    case 'delStudent': {
+      const sid = $('studentForm').dataset.id;
+      arr('items').filter(i => i.sid === sid).forEach(i => del('items', i.id));
+      arr('rems').filter(i => i.sid === sid).forEach(i => del('rems', i.id));
+      arr('tests').filter(i => i.sid === sid).forEach(i => del('tests', i.id));
+      del('students', sid); UI.sid = null; closeModal(); render(); break;
+    }
+    case 'openStudent': UI.sid = id; UI.tab = 'students'; render(); if (innerWidth < 860) setTimeout(() => document.querySelectorAll('.panel')[1].scrollIntoView({ behavior: 'smooth' }), 30); break;
+    case 'addRem': { const t = val('newRem').trim(); if (!t) break; put('rems', { id: uid(), sid: id, text: t, src: 'Added manually', opened: today(), by: SET.instructor, resolved: false }); render(); break; }
+    case 'resolveRem': { const r = D.rems[id]; put('rems', Object.assign({}, r, { resolved: true, resolvedAt: today(), resolvedBy: SET.instructor })); render(); toast('Resolved'); break; }
+    case 'reopenRem': { const r = D.rems[id]; put('rems', Object.assign({}, r, { resolved: false, resolvedAt: '', resolvedBy: '' })); render(); break; }
+    case 'newTest': {
+      if (!activeStudents().length) { toast('Add a student first'); break; }
+      const s = student(b.dataset.sid || UI.sid) || activeStudents()[0];
+      openModal('New marking sheet', testSetupForm({ sid: s.id, kind: s.program === 'CPL' ? 'cpl' : s.program === 'RPP' ? 'rpp' : 'ppl', date: today(), mode: 'Mock / pre-test' })); break;
+    }
+    case 'openTest': UI.testId = id; UI.tab = 'tests'; render(); window.scrollTo(0, 0); break;
+    case 'backTests': UI.testId = null; render(); break;
+    case 'editTest': openModal('Sheet details', testSetupForm(curTest())); break;
+    case 'delTest': { del('tests', $('testForm').dataset.id); UI.testId = null; closeModal(); render(); break; }
+    case 'mark': { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[b.dataset.ex] = t.marks[b.dataset.ex] || {}; const v = +b.dataset.v; m.m = m.m === v ? 0 : v; saveTest(t); refreshEx(t, b.dataset.ex); break; }
+    case 'pill': case 'fm': {
+      const t = curTest(); t.marks = t.marks || {}; const m = t.marks[b.dataset.ex] = t.marks[b.dataset.ex] || {};
+      const k = a === 'pill' ? 'p' : 'fm'; m[k] = m[k] || {}; cycle(m[k], b.dataset.i);
+      saveTest(t); refreshEx(t, b.dataset.ex); break;
+    }
+    case 'variant': { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[b.dataset.ex] = t.marks[b.dataset.ex] || {}; if ((m.v || 0) !== +b.dataset.v) { m.v = +b.dataset.v; m.p = {}; } saveTest(t); refreshEx(t, b.dataset.ex); break; }
+    case 'printTest': printTest(curTest()); break;
+    case 'mailTest': { const t = curTest(), s = student(t.sid) || {}; location.href = 'mailto:' + encodeURIComponent(s.email || '') + '?subject=' + encodeURIComponent(TESTS[t.kind].short + ' flight test ' + (t.mode || '') + ' ' + t.date) + '&body=' + encodeURIComponent(testText(t)); break; }
+    case 'toRem': {
+      const t = curTest(); let n = 0;
+      const existing = new Set(arr('rems').filter(r => r.sid === t.sid && !r.resolved).map(r => r.text));
+      testDef(t).forEach(ex => devLines(t, ex).filter(x => x.s <= 2).forEach(x => {
+        const text = `${ex.id} ${ex.title}: ${x.t}`;
+        if (existing.has(text)) return; existing.add(text);
+        put('rems', { id: uid(), sid: t.sid, text, src: TESTS[t.kind].short + ' ' + (t.mode || '') + ' ' + t.date + ' (' + SEV[x.s].toLowerCase() + ')', opened: today(), by: SET.instructor, resolved: false }); n++;
+      }));
+      toast(n ? n + ' major/critical deviation' + (n === 1 ? '' : 's') + ' added to ' + sName(t.sid) + '’s remediation list' : 'No new major or critical deviations to add'); break;
+    }
+    case 'saveToken': SET.token = val('st_tok').trim(); saveSet(); if (SET.token) sync(true).then(render); else render(); break;
+    case 'forgetToken': SET.token = ''; SET.gistId = ''; saveSet(); setSyncUI('', 'Sync'); render(); break;
+    case 'syncNow': sync(true); break;
+    case 'exportData': {
+      const blob = new Blob([JSON.stringify(D, null, 1)], { type: 'application/json' });
+      const aEl = document.createElement('a'); aEl.href = URL.createObjectURL(blob); aEl.download = 'instructor-hub-backup-' + today() + '.json'; document.body.appendChild(aEl); aEl.click(); setTimeout(() => { URL.revokeObjectURL(aEl.href); aEl.remove(); }, 500); break;
+    }
+  }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.id === 'itemForm') { if (saveItem(readItemForm())) { closeModal(); render(); toast('Saved'); } }
+  else if (f.id === 'studentForm') {
+    const id = f.dataset.id || uid(); const old = D.students[id] || {};
+    put('students', Object.assign({}, old, { id, name: val('sf_name').trim(), program: val('sf_prog'), phone: val('sf_phone').trim(), email: val('sf_email').trim(), notes: val('sf_notes').trim(), archived: val('sf_arch') }));
+    if (!f.dataset.id) UI.sid = id; closeModal(); render();
+  } else if (f.id === 'testForm') {
+    const id = f.dataset.id || uid(); const old = D.tests[id] || { marks: {} };
+    const t = Object.assign({}, old, { id, sid: val('tf_sid'), kind: old.kind || val('tf_kind'), date: val('tf_date'), mode: val('tf_mode'), aircraft: val('tf_ac'), examiner: val('tf_exam').trim(), loc: val('tf_loc').trim(), partial: val('tf_partial'), integrated: val('tf_int') && (old.kind || val('tf_kind')) === 'cpl', wx: val('tf_wx').trim() });
+    put('tests', t); UI.testId = id; UI.tab = 'tests'; closeModal(); render(); window.scrollTo(0, 0);
+  }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.id === 'sq') { UI.q = el.value; const pos = el.selectionStart; render(); const n = $('sq'); n.focus(); n.setSelectionRange(pos, pos); }
+  else if (el.dataset.set) { SET[el.dataset.set] = el.value; saveSet(); }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'dayPick' && el.value) { UI.day = el.value; render(); }
+  else if (el.id === 'showArch') { UI.showArchived = el.checked; render(); }
+  else if (el.dataset.ch) { const t = curTest(); const m = t.marks[el.dataset.ch] = t.marks[el.dataset.ch] || {}; m.ch = el.value; saveTest(t); }
+  else if (el.dataset.rmk) { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[el.dataset.rmk] = t.marks[el.dataset.rmk] || {}; m.r = el.value.trim(); saveTest(t); }
+  else if (el.dataset.tnotes) { const t = curTest(); t.notes = el.value; saveTest(t); }
+  else if (el.id === 'importFile' && el.files[0]) {
+    const rd = new FileReader();
+    rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d || !d.students) throw new Error('not a backup'); D = merge(D, d); persist(); queueSync(); render(); toast('Backup merged'); } catch (er) { toast('Could not read that file'); } };
+    rd.readAsText(el.files[0]);
+  }
+});
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+
+// theme (same setting as the other tools)
+(function () {
+  const root = document.documentElement, btn = $('themeBtn');
+  let c = null; try { c = localStorage.getItem('pfTheme'); } catch (e) {}
+  const eff = () => c || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const apply = () => { if (c) root.setAttribute('data-theme', c); else root.removeAttribute('data-theme'); btn.textContent = eff() === 'dark' ? 'Light' : 'Dark'; };
+  btn.addEventListener('click', () => { c = eff() === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('pfTheme', c); } catch (e) {} apply(); });
+  apply();
+})();
+
+render();
+if (SET.token) { setSyncUI(SET.lastSync ? 'ok' : '', SET.lastSync ? 'Synced ' + new Date(SET.lastSync).toTimeString().slice(0, 5) : 'Sync'); sync(); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>
