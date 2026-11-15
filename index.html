@@ -157,6 +157,15 @@
   .exmore { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .exmore .in { min-height: 38px; }
   details.fm summary { cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+  .tk { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 0; border: 1px solid var(--rule); border-radius: 6px; background: var(--field); overflow: hidden; }
+  .tk h4 { grid-column: 1 / -1; margin: 0; padding: 6px 12px; background: var(--ink); color: var(--paper); font-family: var(--f-display); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: 15px; }
+  .tk .kv { display: grid; gap: 4px; padding: 8px 10px; border-right: 1px solid var(--rule); min-width: 0; }
+  .tk .kv label { font-family: var(--f-display); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .tk .pair { display: flex; gap: 6px; }
+  .tk .in { background: var(--surface); font-family: var(--f-data); min-height: 42px; }
+  .tk .res { display: grid; align-content: center; gap: 2px; padding: 8px 12px; font-family: var(--f-data); font-size: 14px; white-space: nowrap; }
+  .tk .res b { font-size: 17px; }
+  @media (max-width: 760px) { .tk { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tk .kv:nth-of-type(2) { border-right: 0; } .tk .kv { border-bottom: 1px solid var(--rule); } .tk .res { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 18px; white-space: normal; } }
   .legend { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 14px; color: var(--muted); }
   .scale { display: grid; gap: 8px; }
   .scale div { padding: 8px 10px; border-radius: 5px; background: var(--field); border: 1px solid var(--rule); font-size: 14px; }
@@ -636,6 +645,25 @@ function emergSelect(t, ex, v, m) {
     <optgroup label="Flight Test Guide list">${v.choices.map(opt).join('')}</optgroup></select>
     ${!ac ? `<span class="note" style="margin:0">${t.aircraft ? 'No emergency checklist loaded for ' + esc(t.aircraft) + '.' : 'Choose the aircraft in Details to add its emergency checklist.'}</span>` : ''}</div>`;
 }
+const hm2min = v => { const m = String(v || '').replace(/[^0-9]/g, ''); if (m.length < 3) return NaN; const h = +m.slice(0, -2), mi = +m.slice(-2); return h < 24 && mi < 60 ? h * 60 + mi : NaN; };
+const fmtHM = v => { const m = String(v || '').replace(/[^0-9]/g, ''); return m.length >= 3 ? m.slice(0, -2).padStart(2, '0') + ':' + m.slice(-2) : v; };
+function tkCalc(tk) {
+  tk = tk || {};
+  const a = hm2min(tk.up), b = hm2min(tk.down); let air = '—';
+  if (isFinite(a) && isFinite(b)) { const d = (b - a + 1440) % 1440; air = Math.floor(d / 60) + ':' + pad(d % 60) + ' (' + (d / 60).toFixed(1) + ' h)'; }
+  const hs = parseFloat(String(tk.hs || '').replace(',', '.')), he = parseFloat(String(tk.he || '').replace(',', '.'));
+  const flt = isFinite(hs) && isFinite(he) && he >= hs ? (Math.round((he - hs) * 10) / 10).toFixed(1) + ' h' : '—';
+  return { air, flt };
+}
+function tkHTML(t) {
+  const tk = t.tk || {}, c = tkCalc(tk);
+  return `<div class="tk" id="tkTile"><h4>Time Keeping</h4>
+    <div class="kv"><label for="tk_hs">HOBBS Start</label><input class="in" id="tk_hs" data-tk="hs" inputmode="decimal" autocomplete="off" value="${esc(tk.hs)}"></div>
+    <div class="kv"><label for="tk_up">Time Up</label><span class="pair"><input class="in" id="tk_up" data-tk="up" inputmode="numeric" maxlength="5" autocomplete="off" value="${esc(tk.up)}"><button type="button" class="btn small" data-act="tkNow" data-v="up">Now</button></span></div>
+    <div class="kv"><label for="tk_down">Time Down</label><span class="pair"><input class="in" id="tk_down" data-tk="down" inputmode="numeric" maxlength="5" autocomplete="off" value="${esc(tk.down)}"><button type="button" class="btn small" data-act="tkNow" data-v="down">Now</button></span></div>
+    <div class="kv"><label for="tk_he">HOBBS Stop</label><input class="in" id="tk_he" data-tk="he" inputmode="decimal" autocomplete="off" value="${esc(tk.he)}"></div>
+    <div class="res" id="tkRes"><span>Air time <b>${esc(c.air)}</b></span><span>Flight time <b>${esc(c.flt)}</b></span></div></div>`;
+}
 const isTol = p => /±|\+\s?\d/.test(p.t + ' ' + p.f);
 function exRowHTML(t, ex) {
   const m = exState(t, ex), v = exVariant(t, ex), mk = m.m || 0, open = UI.openEx.has(ex.id);
@@ -665,6 +693,7 @@ function viewTest(t) {
       <div class="actions"><button class="btn small" type="button" data-act="editTest">Details</button><button class="btn small" type="button" data-act="toRem">Send to remediation</button><button class="btn small" type="button" data-act="mailTest">Email</button><button class="btn small primary" type="button" data-act="printTest">Print report</button></div></div>
     <div><h2>${esc(T.name)}${t.integrated ? ' · Integrated' : ''}${t.partial ? ' · Partial' : ''}</h2>
       <div class="note" style="margin:2px 0 0">${esc([sName(t.sid), fmtDay(t.date), t.mode, t.aircraft, t.examiner].filter(Boolean).join(' · '))} · Performance criteria: ${esc(T.guide)}</div></div>
+    ${tkHTML(t)}
     <div class="ftsum" id="ftsum">${sumHTML(t, r)}</div>
     <div class="legend"><span>Tap an exercise to open its Performance Criteria. Tap a pill:</span><span class="pill s3"><b>Minor</b></span><span class="pill s2"><b>Major</b></span><span class="pill s1"><b>Critical</b></span><span>· tolerance items (±) are listed first.</span><span>Long text? Hover or press-and-hold to read the full criterion.</span></div>
     <div class="actions"><button class="btn small" type="button" data-act="expandAll">Open all</button><button class="btn small" type="button" data-act="collapseAll">Close all</button></div>
@@ -691,7 +720,10 @@ function devLines(t, ex) {
 }
 function testText(t) {
   const T = TESTS[t.kind], r = testResult(t);
-  const L = [`${T.name} flight test${t.partial ? ' (partial)' : ''} — ${sName(t.sid)}`, `${fmtDay(t.date)} · ${t.mode || ''}${t.aircraft ? ' · ' + t.aircraft : ''}`, `Result: ${r.status}. ${r.detail}`, `Total ${r.total} / ${r.max}${t.partial ? '' : ' (pass mark ' + r.need + ')'}`, ''];
+  const L = [`${T.name} flight test${t.partial ? ' (partial)' : ''} — ${sName(t.sid)}`, `${fmtDay(t.date)} · ${t.mode || ''}${t.aircraft ? ' · ' + t.aircraft : ''}`, `Result: ${r.status}. ${r.detail}`, `Total ${r.total} / ${r.max}${t.partial ? '' : ' (pass mark ' + r.need + ')'}`];
+  const tk = t.tk || {}, tc = tkCalc(tk);
+  if (tk.hs || tk.he || tk.up || tk.down) L.push(`HOBBS ${tk.hs || '—'}–${tk.he || '—'} (${tc.flt}) · Time up ${tk.up || '—'} · Time down ${tk.down || '—'} · Air time ${tc.air}`);
+  L.push('');
   testDef(t).forEach(ex => {
     const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
     if (!m.m && !d.length && !m.r) return;
@@ -708,6 +740,7 @@ function printTest(t) {
   doPrint(`<h1>Flight Test Report · ${esc(T.name)} (Aeroplane)</h1>
     <div class="sm">${t.mode && /mock/i.test(t.mode) ? 'Mock / pre-test assessment — not a Transport Canada form. ' : ''}Marked against TC form ${esc(T.form)} and Flight Test Guide ${esc(T.guide)}.</div>
     <div class="meta" style="margin-top:6pt"><div><b>Applicant:</b> ${esc(sName(t.sid))}</div><div><b>Date:</b> ${esc(fmtDay(t.date))}</div><div><b>Assessor:</b> ${esc(t.examiner || '')}</div><div><b>Location:</b> ${esc(t.loc || '')}</div>
+    <div><b>HOBBS:</b> ${esc((t.tk || {}).hs || '')} – ${esc((t.tk || {}).he || '')} (${esc(tkCalc(t.tk).flt)})</div><div><b>Time up / down:</b> ${esc((t.tk || {}).up || '')} – ${esc((t.tk || {}).down || '')} · air ${esc(tkCalc(t.tk).air)}</div>
     <div><b>Aircraft:</b> ${esc(t.aircraft || '')}</div><div><b>Test:</b> ${esc(T.short)}${t.integrated ? ' integrated' : ''}${t.partial ? ' · partial' : ''} · ${esc(t.mode || '')}</div><div><b>Weather:</b> ${esc(t.wx || '')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div></div>
     <table><tr><th style="width:9%">Ex.</th><th style="width:30%">Exercise</th><th class="c" style="width:7%">Mark</th><th>Remarks / deviations from the Performance Criteria</th></tr>
     ${testDef(t).map(ex => { const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
@@ -810,6 +843,7 @@ document.addEventListener('click', e => {
     }
     case 'openTest': UI.openEx.clear(); UI.testId = id; UI.tab = 'tests'; render(); window.scrollTo(0, 0); break;
     case 'backTests': UI.testId = null; UI.openEx.clear(); render(); break;
+    case 'tkNow': { const t = curTest(); t.tk = t.tk || {}; t.tk[b.dataset.v] = nowHM(); saveTest(t); $('tk_' + b.dataset.v).value = t.tk[b.dataset.v]; const c = tkCalc(t.tk); $('tkRes').innerHTML = `<span>Air time <b>${esc(c.air)}</b></span><span>Flight time <b>${esc(c.flt)}</b></span>`; break; }
     case 'toggleEx': { const x = b.dataset.ex; if (UI.openEx.has(x)) UI.openEx.delete(x); else UI.openEx.add(x); refreshEx(curTest(), x); break; }
     case 'expandAll': testDef(curTest()).forEach(ex => UI.openEx.add(ex.id)); render(); break;
     case 'collapseAll': UI.openEx.clear(); render(); break;
@@ -861,6 +895,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'sq') { UI.q = el.value; const pos = el.selectionStart; render(); const n = $('sq'); n.focus(); n.setSelectionRange(pos, pos); }
   else if (el.dataset.set) { SET[el.dataset.set] = el.value; saveSet(); }
+  else if (el.dataset.tk) { const t = curTest(); t.tk = t.tk || {}; t.tk[el.dataset.tk] = el.value.trim(); saveTest(t); const c = tkCalc(t.tk); $('tkRes').innerHTML = `<span>Air time <b>${esc(c.air)}</b></span><span>Flight time <b>${esc(c.flt)}</b></span>`; }
 });
 document.addEventListener('change', e => {
   const el = e.target;
@@ -868,6 +903,7 @@ document.addEventListener('change', e => {
   else if (el.id === 'showArch') { UI.showArchived = el.checked; render(); }
   else if (el.dataset.ch) { const t = curTest(); const m = t.marks[el.dataset.ch] = t.marks[el.dataset.ch] || {}; m.ch = el.value; saveTest(t); }
   else if (el.dataset.rmk) { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[el.dataset.rmk] = t.marks[el.dataset.rmk] || {}; m.r = el.value.trim(); saveTest(t); }
+  else if (el.dataset.tk && (el.dataset.tk === 'up' || el.dataset.tk === 'down') && el.value) { const t = curTest(); el.value = fmtHM(el.value); t.tk[el.dataset.tk] = el.value; saveTest(t); }
   else if (el.dataset.tnotes) { const t = curTest(); t.notes = el.value; saveTest(t); }
   else if (el.id === 'importFile' && el.files[0]) {
     const rd = new FileReader();
