@@ -238,6 +238,13 @@ const TESTS = {
   ppl: { name: 'Private Pilot Licence', short: 'PPL', form: '26-0064E', pass: 62, guide: 'TP 13723E (03/2021)' },
   cpl: { name: 'Commercial Pilot Licence', short: 'CPL', form: '26-0657E', pass: 93, passInt: 81, guide: 'TP 13462E (01/2021)' }
 };
+// Emergency checklist headings, from the school's emergency checklists for each aircraft.
+const EMERG = {
+  'C-GVOT': { type: 'C172N', list: ["Engine Fire During Start on Ground", "Engine Fire in Flight", "Electrical Fire in Flight", "Cabin Fire", "Wing Fire", "Engine Failure During Take-off Run", "Engine Failure After Take-off", "Engine Failure During Flight", "Forced Landing Without Engine Power", "Precautionary Landing With Engine Power", "Ditching", "Excessive Rate of Charge", "Low-Voltage Light Illuminates In-Flight", "Static Source Blockage", "Landing With a Flat Main Tire", "CO Detector Alarm", "Landing Without Elevator Control", "Recovery From a Spiral Dive", "Recovery From Spins", "Inadvertent Icing Encounter", "Executing a 180° Turn in Clouds", "Emergency Descent Through Clouds", "Rough Engine Operation / Loss of Power", "Low Oil Pressure"] },
+  'C-GVOJ': { type: 'C172M', list: ["Engine Fire During Start on Ground", "Engine Fire in Flight", "Electrical Fire in Flight", "Cabin Fire", "Wing Fire", "Engine Failure During Take-off Run", "Engine Failure After Take-off", "Engine Failure During Flight", "Forced Landing Without Engine Power", "Precautionary Landing With Engine Power", "Ditching", "Excessive Rate of Charge", "Over-Voltage Light Illuminates In-Flight", "Static Source Blockage", "Landing With a Flat Main Tire", "CO Detector Alarm", "Landing Without Elevator Control", "Recovery From a Spiral Dive", "Recovery From Spins", "Inadvertent Icing Encounter", "Executing a 180° Turn in Clouds", "Emergency Descent Through Clouds", "Rough Engine Operation / Loss of Power", "Low Oil Pressure"] },
+  'C-FLCT': { type: 'PA-28-140', list: ["Engine Fire During Start", "Engine Fire in Flight", "Electrical Fire in Flight", "Cabin Fire", "Wing Fire", "Engine Failure During Take-off Run", "Engine Failure After Take-off", "Engine Failure During Flight", "Forced Landing", "Rough Engine Operation", "Low Oil Pressure", "Precautionary Landing", "Excessive Rate of Charge", "Low Voltage", "Door Open in Flight", "Landing With a Flat Main Tire", "Landing Without Elevator Control", "Static Source Blockage", "Inadvertent Icing Encounter", "CO Detector Alarm", "Executing a 180° Turn in Clouds", "Emergency Descent Through Clouds", "Ditching", "Recovery From a Spiral Dive", "Recovery From a Spin", "Loss of Fuel Pressure"] }
+};
+const emergFor = reg => { const k = Object.keys(EMERG).find(k => (reg || '').toUpperCase().replace(/\s/g, '').includes(k)); return k ? Object.assign({ reg: k }, EMERG[k]) : null; };
 const SEV = { 3: 'Minor', 2: 'Major', 1: 'Critical' };
 // Flight management (non-technical) headings from the Flight Test Guides; available on every exercise.
 const FM = ['Problem solving / decision making', 'Situational awareness', 'Communication', 'Workload management', 'Airmanship (lookout, checklists)'];
@@ -619,6 +626,16 @@ function testSetupForm(t) {
     <div class="actions"><button class="btn primary" type="submit">${t.id ? 'Save' : 'Start marking'}</button><button class="btn" type="button" data-act="closeModal">Cancel</button>
     ${t.id ? '<button class="btn danger" type="button" data-act="delTest" data-confirm="Tap again to delete this sheet">Delete sheet</button>' : ''}</div></form>`;
 }
+function emergSelect(t, ex, v, m) {
+  const ac = emergFor(t.aircraft), opt = c => `<option ${c === m.ch ? 'selected' : ''}>${esc(c)}</option>`;
+  const acList = ac ? ac.list : [];
+  const known = acList.concat(v.choices);
+  const extra = m.ch && !known.includes(m.ch) ? `<option selected>${esc(m.ch)}</option>` : '';
+  return `<div class="exmore"><label class="lbl" for="ch_${ex.id}">Emergency</label><select class="in" id="ch_${ex.id}" data-ch="${ex.id}" style="width:auto;max-width:100%"><option value="">— select —</option>${extra}
+    ${ac ? `<optgroup label="${esc(ac.reg + ' (' + ac.type + ') emergency checklist')}">${acList.map(opt).join('')}</optgroup>` : ''}
+    <optgroup label="Flight Test Guide list">${v.choices.map(opt).join('')}</optgroup></select>
+    ${!ac ? `<span class="note" style="margin:0">${t.aircraft ? 'No emergency checklist loaded for ' + esc(t.aircraft) + '.' : 'Choose the aircraft in Details to add its emergency checklist.'}</span>` : ''}</div>`;
+}
 const isTol = p => /±|\+\s?\d/.test(p.t + ' ' + p.f);
 function exRowHTML(t, ex) {
   const m = exState(t, ex), v = exVariant(t, ex), mk = m.m || 0, open = UI.openEx.has(ex.id);
@@ -634,7 +651,7 @@ function exRowHTML(t, ex) {
       <span class="marks" role="group" aria-label="Mark for ${esc(ex.id)}">${[1, 2, 3, 4].map(n => `<button type="button" data-act="mark" data-ex="${ex.id}" data-v="${n}" aria-pressed="${mk === n}">${n}</button>`).join('')}</span></div>
     ${open ? `<div class="exbody">
     ${ex.v.length > 1 ? `<div class="seg sm" style="max-width:420px">${ex.v.map((x, i) => `<button type="button" data-act="variant" data-ex="${ex.id}" data-v="${i}" aria-pressed="${(m.v || 0) === i}">${esc(/soft/i.test(x.label) ? 'Soft field' : 'Short field')}</button>`).join('')}</div>` : ''}
-    ${v.choices ? `<div class="exmore"><label class="lbl" for="ch_${ex.id}">Emergency</label><select class="in" id="ch_${ex.id}" data-ch="${ex.id}" style="width:auto;max-width:100%"><option value="">— select —</option>${v.choices.map(c => `<option ${c === m.ch ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
+    ${v.choices ? emergSelect(t, ex, v, m) : ''}
     <div class="pills">${pills}</div>
     <details class="fm" ${fmOn ? 'open' : ''}><summary>Flight management</summary><div class="pills">${fm}</div></details>
     <div class="exmore"><input class="in" data-rmk="${ex.id}" placeholder="Remarks" value="${esc(m.r)}" style="flex:1;min-width:200px"></div>
