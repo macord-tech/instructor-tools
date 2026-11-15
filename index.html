@@ -167,6 +167,10 @@
   .tk .res { display: grid; align-content: center; gap: 2px; padding: 8px 12px; font-family: var(--f-data); font-size: 14px; white-space: nowrap; }
   .tk .res b { font-size: 17px; }
   @media (max-width: 760px) { .tk { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tk .kv:nth-of-type(2n) { border-right: 0; } .tk .kv { border-bottom: 1px solid var(--rule); } .tk .res { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 18px; white-space: normal; } }
+  .imp { border: 1px dashed var(--accent); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; background: var(--surface); }
+  .wb { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; background: var(--surface); }
+  .wb .ro { display: flex; align-items: center; border-style: dashed; background: transparent; }
+  .wbtxt { font-family: var(--f-data); font-size: 12.5px; white-space: pre-wrap; margin: 6px 0 0; overflow-x: auto; }
   .legend { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 14px; color: var(--muted); }
   .scale { display: grid; gap: 8px; }
   .scale div { padding: 8px 10px; border-radius: 5px; background: var(--field); border: 1px solid var(--rule); font-size: 14px; }
@@ -440,17 +444,24 @@ function itemForm(i) {
     </div>
     <div class="checks"><label><input type="checkbox" id="if_done" ${i.done ? 'checked' : ''}> Item completed</label></div>
 
-    <details class="sec" ${flt ? '' : ''}><summary><span class="sp">Preflight</span><span class="tag plain">${esc(pf.ap || SET.airport)}</span></summary><div class="body">
+    <details class="sec" ${pf.wb ? 'open' : ''}><summary><span class="sp">Preflight</span>${pf.wb ? `<span class="tag ${/OUT/i.test(pf.wb.result) ? 'warn' : 'ok'}">W&amp;B ${esc(pf.wb.result || '')}</span>` : ''}<span class="tag plain">${esc(pf.ap || SET.airport)}</span></summary><div class="body">
+      <div class="imp">
+        <div class="lbl">From the student's Preflight Briefing</div>
+        <p class="note" style="margin:2px 0 8px">Have the student tap <b>Email</b> (send it to you) or <b>Export TXT</b> in Preflight Briefing, then paste the text here or load the .txt file. It fills this section, including weight and balance.</p>
+        <textarea class="in" id="pf_paste" placeholder="Paste the student's briefing here" style="min-height:70px"></textarea>
+        <div class="actions" style="margin-top:8px"><button class="btn small primary" type="button" data-act="pfImport">Fill from briefing</button><label class="btn small" for="pf_file">Load .txt file</label><input type="file" id="pf_file" accept=".txt,text/plain" hidden><span class="msg" id="pf_msg"></span></div>
+      </div>
       <div class="row4">${f('pf_ap', 'Airport', pf.ap || SET.airport)}${f('pf_rwy', 'Runway', pf.rwy)}${f('pf_wind', 'Winds', pf.wind, 'num')}${f('pf_alt', 'Alt. setting', pf.alt, 'num')}</div>
-      <div class="row4">${f('pf_atis', 'ATIS', pf.atis)}${f('pf_sq', 'Squawk', pf.sq, 'num')}${f('pf_fuelL', 'Fuel L (gal)', pf.fuelL, 'num')}${f('pf_fuelR', 'Fuel R (gal)', pf.fuelR, 'num')}</div>
+      <div class="row4">${f('pf_atis', 'ATIS', pf.atis)}<div></div>${f('pf_fuelL', 'Fuel L (gal)', pf.fuelL, 'num')}${f('pf_fuelR', 'Fuel R (gal)', pf.fuelR, 'num')}</div>
       <div class="row4">${f('pf_oil', 'Oil (qt)', pf.oil, 'num')}${f('pf_hobbsOut', 'HOBBS start', pf.hobbsOut, 'num')}${f('pf_hobbsIn', 'HOBBS stop', pf.hobbsIn, 'num')}<div class="field"><span class="lbl">HOBBS time</span><output class="in num" id="pf_hobbs" style="display:flex;align-items:center;border-style:dashed;background:transparent"></output></div></div>
       <div class="row2">
         <div class="field"><label class="lbl" for="pf_up">Time up</label><div class="actions" style="flex-wrap:nowrap"><input class="in num" type="time" id="pf_up" value="${esc(pf.up)}"><button class="btn small" type="button" data-act="now" data-v="pf_up">Now</button></div></div>
         <div class="field"><label class="lbl" for="pf_down">Time down</label><div class="actions" style="flex-wrap:nowrap"><input class="in num" type="time" id="pf_down" value="${esc(pf.down)}"><button class="btn small" type="button" data-act="now" data-v="pf_down">Now</button></div></div>
       </div>
+      <div id="pf_wbBox">${wbHTML(pf.wb)}</div>
       ${ta('pf_metar', 'METAR / TAF', pf.metar, 'Paste METAR and TAF')}
       ${ta('pf_notam', 'NOTAM / weather notes', pf.notam)}
-      <div class="actions"><a class="btn small" href="${esc(SET.preflightUrl)}" target="_blank" rel="noopener">Open Preflight Briefing ↗</a><span class="note" style="margin:0">Full briefing card, weight &amp; balance and performance.</span></div>
+      <div class="actions"><a class="btn small" href="${esc(SET.preflightUrl)}" target="_blank" rel="noopener">Open Preflight Briefing ↗</a><span class="note" style="margin:0">The student fills this in; their briefing comes back here.</span></div>
     </div></details>
 
     <details class="sec" ${pre.done || pre.notes ? 'open' : ''}><summary><span class="sp">Pre-flight briefing</span>${pre.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
@@ -478,7 +489,62 @@ function itemForm(i) {
     </div>
   </form>`;
 }
+let curWB = null;
+function wbHTML(wb) {
+  if (!wb) return `<div class="wb"><div class="lbl">Weight and balance</div><div class="empty" style="padding:10px">No weight and balance yet — it comes from the student's Preflight Briefing.</div></div>`;
+  const bad = /OUT/i.test(wb.result);
+  return `<div class="wb"><div class="lbl">Weight and balance${wb.ac ? ' · ' + esc(wb.ac) : ''}</div>
+    <div class="row4" style="margin-top:6px">
+      <div class="field"><span class="lbl">Ramp</span><output class="in num ro">${esc(wb.ramp || '—')}</output></div>
+      <div class="field"><span class="lbl">Ramp CG</span><output class="in num ro">${esc(wb.rampCg || '—')}</output></div>
+      <div class="field"><span class="lbl">Landing</span><output class="in num ro">${esc(wb.ldg || '—')}</output></div>
+      <div class="field"><span class="lbl">Landing CG</span><output class="in num ro">${esc(wb.ldgCg || '—')}</output></div>
+    </div>
+    <div class="actions"><span class="tag ${bad ? 'warn' : 'ok'}">${esc(wb.result || '—')}</span>${wb.cat ? `<span class="tag plain">${esc(wb.cat)} category</span>` : ''}<button class="btn small danger" type="button" data-act="wbClear" data-confirm="Tap again to remove">Remove</button></div>
+    ${wb.text ? `<details class="fm"><summary>Loading and checks</summary><pre class="wbtxt">${esc(wb.text)}</pre></details>` : ''}</div>`;
+}
+// Read the text the Preflight Briefing tool produces (Email / Export TXT).
+function parseBriefing(txt) {
+  const T = String(txt || '').replace(/\r/g, ''), out = { pf: {} }, pf = out.pf;
+  const clean = v => { v = (v || '').trim(); return v === '—' || v === '-' ? '' : v; };
+  const line = re => { const m = T.match(re); return m ? clean(m[1]) : ''; };
+  const head = T.match(/PREFLIGHT BRIEFING:\s*(\S+)\s+(.*?)\s*·\s*(\S+)/);
+  if (!head && !/WEIGHT & BALANCE|Ramp:/i.test(T)) return null;
+  if (head) { out.ac = head[1]; out.type = head[2]; pf.ap = head[3]; }
+  pf.rwy = line(/^Runway:\s*(.*)$/m);
+  const w = T.match(/^Winds:\s*(.*)$/m); if (w) { const mg = w[1].match(/(\d{1,3})° magnetic/), m = w[1].match(/(\d{1,3})°.*?@\s*(\d+)/); pf.wind = m ? (mg ? mg[1] : m[1]).padStart(3, '0') + '@' + m[2] : clean(w[1]); }
+  pf.alt = line(/^Alt\. setting:\s*(.*)$/m); pf.atis = line(/^ATIS:\s*(.*)$/m);
+  pf.hobbsOut = line(/HOBBS Start:\s*(\S+)/); pf.up = line(/Time Up:\s*(\S+)/); pf.down = line(/Time Down:\s*(\S+)/); pf.hobbsIn = line(/HOBBS Stop:\s*(\S+)/);
+  ['up', 'down'].forEach(k => { const d = (pf[k] || '').replace(/\D/g, ''); pf[k] = d.length >= 3 ? d.slice(0, -2).padStart(2, '0') + ':' + d.slice(-2) : ''; });
+  pf.metar = line(/^METAR:\s*(.*)$/m);
+  const fuel = T.match(/Fuel on board: L\s*([\d.]+|—)\s*gal, R\s*([\d.]+|—)/); if (fuel) { pf.fuelL = clean(fuel[1]); pf.fuelR = clean(fuel[2]); }
+  const oil = T.match(/Oil quantity:\s*([\d.]+)/); if (oil) pf.oil = oil[1];
+  const alerts = (T.match(/^\*\*\*.*\*\*\*$/gm) || []).map(x => x.replace(/\*/g, '').trim());
+  if (alerts.length) pf.notam = alerts.join('\n');
+  const notes = T.match(/\nNOTES\n([\s\S]*?)\n\n[A-Z ]+\n/); if (notes) pf.notam = [pf.notam, notes[1].trim()].filter(Boolean).join('\n');
+  // weight and balance section
+  const wbm = T.match(/\n(?:WEIGHT AND BALANCE|WEIGHT & BALANCE[^\n]*)\n([\s\S]*?)(?:\n\nWEATHER\n|$)/);
+  const wbt = wbm ? wbm[1].trim() : '';
+  const rp = T.match(/Ramp:\s*([\d.,]+)\s*lb,\s*CG\s*([\d.]+)/), ld = T.match(/Landing:\s*([\d.,]+)\s*lb,\s*CG\s*([\d.]+)/);
+  if (wbt || rp) out.wb = { ac: out.ac ? out.ac + (out.type ? ' ' + out.type : '') : '', ramp: rp ? rp[1] + ' lb' : '', rampCg: rp ? rp[2] + ' in' : '', ldg: ld ? ld[1] + ' lb' : '', ldgCg: ld ? ld[2] + ' in' : '', result: line(/^Result:\s*(.*)$/m), cat: line(/^Category:\s*(.*)$/m), text: wbt };
+  const perf = T.match(/\nAIRCRAFT PERFORMANCE\n([\s\S]*?)\n\n/); if (perf) out.perf = perf[1].trim();
+  return out;
+}
+function applyBriefing(txt) {
+  const r = parseBriefing(txt), msg = $('pf_msg');
+  if (!r) { msg.className = 'msg err'; msg.textContent = 'That does not look like a Preflight Briefing.'; return; }
+  const set = (id, v) => { if (v && $(id)) $(id).value = v; };
+  set('pf_ap', r.pf.ap); set('pf_rwy', r.pf.rwy); set('pf_wind', r.pf.wind); set('pf_alt', r.pf.alt); set('pf_atis', r.pf.atis);
+  set('pf_fuelL', r.pf.fuelL); set('pf_fuelR', r.pf.fuelR); set('pf_oil', r.pf.oil); set('pf_hobbsOut', r.pf.hobbsOut); set('pf_hobbsIn', r.pf.hobbsIn);
+  set('pf_up', r.pf.up); set('pf_down', r.pf.down); set('pf_metar', r.pf.metar); set('pf_notam', r.pf.notam);
+  if (r.ac) { const sel = $('if_ac'); if (![...sel.options].some(o => o.value === r.ac)) sel.add(new Option(r.ac, r.ac)); sel.value = r.ac; }
+  if (r.wb) { curWB = r.wb; $('pf_wbBox').innerHTML = wbHTML(curWB); }
+  $('pf_hobbsOut').dispatchEvent(new Event('input'));
+  msg.className = 'msg'; msg.textContent = 'Filled from the briefing' + (r.wb ? ' — W&B ' + (r.wb.result || 'loaded') : '') + '. Tap Save to keep it.';
+  $('pf_paste').value = '';
+}
 function openItem(i) {
+  curWB = (i.pf && i.pf.wb) || null;
   openModal(i.id ? 'Edit item' : 'New item', itemForm(i));
   const calc = () => { const a = parseFloat(val('pf_hobbsOut')), b = parseFloat(val('pf_hobbsIn')); $('pf_hobbs').textContent = isFinite(a) && isFinite(b) && b >= a ? (b - a).toFixed(1) + ' h' : '—'; };
   ['pf_hobbsOut', 'pf_hobbsIn'].forEach(id => $(id).addEventListener('input', calc)); calc();
@@ -489,7 +555,7 @@ function readItemForm() {
   const g = k => val(k).trim ? val(k).trim() : val(k);
   return Object.assign({}, old || {}, {
     id: id || uid(), sid: val('if_sid'), title: g('if_title'), date: val('if_date'), time: val('if_time'), kind: val('if_kind'), aircraft: val('if_ac'), done: val('if_done'),
-    pf: { ap: g('pf_ap'), rwy: g('pf_rwy'), wind: g('pf_wind'), alt: g('pf_alt'), atis: g('pf_atis'), sq: g('pf_sq'), fuelL: g('pf_fuelL'), fuelR: g('pf_fuelR'), oil: g('pf_oil'), hobbsOut: g('pf_hobbsOut'), hobbsIn: g('pf_hobbsIn'), up: val('pf_up'), down: val('pf_down'), metar: g('pf_metar'), notam: g('pf_notam') },
+    pf: { ap: g('pf_ap'), rwy: g('pf_rwy'), wind: g('pf_wind'), alt: g('pf_alt'), atis: g('pf_atis'), wb: curWB || null, perf: (old && old.pf && old.pf.perf) || '', fuelL: g('pf_fuelL'), fuelR: g('pf_fuelR'), oil: g('pf_oil'), hobbsOut: g('pf_hobbsOut'), hobbsIn: g('pf_hobbsIn'), up: val('pf_up'), down: val('pf_down'), metar: g('pf_metar'), notam: g('pf_notam') },
     pre: { pgi: val('pr_pgi'), done: val('pr_done'), obj: g('pr_obj'), tem: g('pr_tem'), notes: g('pr_notes') },
     deb: { done: val('db_done'), well: g('db_well'), rem: g('db_rem'), study: g('db_study'), next: g('db_next') }
   });
@@ -508,6 +574,7 @@ function itemText(i) {
   const L = [`${s.name || ''} — ${i.title || i.kind}`, `${fmtDay(i.date)}${i.time ? ' ' + i.time : ''} · ${i.kind}${i.aircraft ? ' · ' + i.aircraft : ''}`];
   const hob = parseFloat(pf.hobbsIn) - parseFloat(pf.hobbsOut);
   if (isFinite(hob) && hob >= 0) L.push(`HOBBS ${pf.hobbsOut}–${pf.hobbsIn} (${hob.toFixed(1)} h)`);
+  if (pf.wb) L.push(`W&B: ramp ${pf.wb.ramp || '—'} CG ${pf.wb.rampCg || '—'}, landing ${pf.wb.ldg || '—'} CG ${pf.wb.ldgCg || '—'} — ${pf.wb.result || ''}`);
   if (pre.obj) L.push('', 'OBJECTIVES', pre.obj);
   if (pre.tem) L.push('', 'THREATS & ERRORS', pre.tem);
   if (deb.well) L.push('', 'WHAT WENT WELL', deb.well);
@@ -523,7 +590,7 @@ function printItem(i) {
   const hob = parseFloat(pf.hobbsIn) - parseFloat(pf.hobbsOut);
   doPrint(`<h1>${esc(i.title || i.kind)}</h1>
     <div class="meta"><div><b>Student:</b> ${esc(s.name)}</div><div><b>Date:</b> ${esc(fmtDay(i.date))} ${esc(i.time || '')}</div><div><b>Type:</b> ${esc(i.kind)}</div><div><b>Aircraft:</b> ${esc(i.aircraft || '—')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div><div><b>Status:</b> ${i.done ? 'Completed' : 'Planned'}</div></div>
-    <h2>Preflight</h2><table>${row('Airport / runway', [pf.ap, pf.rwy].filter(Boolean).join(' / '))}${row('Winds / altimeter', [pf.wind, pf.alt].filter(Boolean).join(' / '))}${row('ATIS / squawk', [pf.atis, pf.sq].filter(Boolean).join(' / '))}${row('Fuel L / R · oil', [pf.fuelL, pf.fuelR].filter(Boolean).join(' / ') + (pf.oil ? ' gal · ' + pf.oil + ' qt' : ''))}${row('HOBBS', pf.hobbsOut || pf.hobbsIn ? `${pf.hobbsOut || ''} – ${pf.hobbsIn || ''}${isFinite(hob) && hob >= 0 ? ' (' + hob.toFixed(1) + ' h)' : ''}` : '')}${row('Time up / down', [pf.up, pf.down].filter(Boolean).join(' – '))}${row('METAR / TAF', pf.metar)}${row('NOTAM / notes', pf.notam)}</table>
+    <h2>Preflight</h2><table>${row('Airport / runway', [pf.ap, pf.rwy].filter(Boolean).join(' / '))}${row('Winds / altimeter', [pf.wind, pf.alt].filter(Boolean).join(' / '))}${row('ATIS', pf.atis)}${row('Weight & balance', pf.wb ? [pf.wb.ac, 'Ramp ' + (pf.wb.ramp || '—') + ' CG ' + (pf.wb.rampCg || '—'), 'Landing ' + (pf.wb.ldg || '—') + ' CG ' + (pf.wb.ldgCg || '—'), pf.wb.result, pf.wb.cat && pf.wb.cat + ' category'].filter(Boolean).join(' · ') : '')}${row('Fuel L / R · oil', [pf.fuelL, pf.fuelR].filter(Boolean).join(' / ') + (pf.oil ? ' gal · ' + pf.oil + ' qt' : ''))}${row('HOBBS', pf.hobbsOut || pf.hobbsIn ? `${pf.hobbsOut || ''} – ${pf.hobbsIn || ''}${isFinite(hob) && hob >= 0 ? ' (' + hob.toFixed(1) + ' h)' : ''}` : '')}${row('Time up / down', [pf.up, pf.down].filter(Boolean).join(' – '))}${row('METAR / TAF', pf.metar)}${row('NOTAM / notes', pf.notam)}</table>
     <h2>Pre-flight briefing</h2><table>${row('Completed', [pre.pgi && 'PGI given', pre.done && 'Pre-flight briefing done'].filter(Boolean).join(' · ') || '—')}${row('Objectives', pre.obj)}${row('Threats & errors', pre.tem)}${row('Notes', pre.notes)}</table>
     <h2>Post-flight debrief</h2><table>${row('Completed', deb.done ? 'Debrief done' : '—')}${row('What went well', deb.well)}${row('Areas for remediation', deb.rem)}${row('Study assigned', deb.study)}${row('Plan for next lesson', deb.next)}</table>`);
 }
@@ -817,6 +884,8 @@ document.addEventListener('click', e => {
     }
     case 'editItem': openItem(D.items[id]); break;
     case 'now': $(b.dataset.v).value = nowHM(); break;
+    case 'pfImport': applyBriefing(val('pf_paste')); break;
+    case 'wbClear': curWB = null; $('pf_wbBox').innerHTML = wbHTML(null); break;
     case 'dupItem': { const r = readItemForm(); openItem(Object.assign({}, r, { id: '', date: today(), done: false, pre: {}, deb: {}, pf: { ap: r.pf.ap } })); break; }
     case 'delItem': { const fid = $('itemForm').dataset.id; del('items', fid); closeModal(); render(); toast('Item deleted'); break; }
     case 'printItem': printItem(readItemForm()); break;
@@ -911,6 +980,7 @@ document.addEventListener('change', e => {
   else if (el.dataset.rmk) { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[el.dataset.rmk] = t.marks[el.dataset.rmk] || {}; m.r = el.value.trim(); saveTest(t); }
   else if (el.dataset.tk && ['up', 'down'].includes(el.dataset.tk) && el.value) { const t = curTest(); el.value = fmtHM(el.value); t.tk[el.dataset.tk] = el.value; saveTest(t); }
   else if (el.dataset.tnotes) { const t = curTest(); t.notes = el.value; saveTest(t); }
+  else if (el.id === 'pf_file' && el.files[0]) { const rd = new FileReader(); rd.onload = () => applyBriefing(rd.result); rd.readAsText(el.files[0]); el.value = ''; }
   else if (el.id === 'importFile' && el.files[0]) {
     const rd = new FileReader();
     rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d || !d.students) throw new Error('not a backup'); D = merge(D, d); persist(); queueSync(); render(); toast('Backup merged'); } catch (er) { toast('Could not read that file'); } };
