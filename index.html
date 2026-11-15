@@ -135,7 +135,12 @@
   .extitle { font-weight: 700; }
   .marks { display: flex; gap: 6px; }
   .marks button { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--rule); background: var(--surface); color: var(--ink); font-family: var(--f-data); font-weight: 700; font-size: 18px; cursor: pointer; }
-  .marks button.sug { border-style: dashed; border-color: var(--accent); }
+  .exrow { gap: 0; padding: 6px 10px; }
+  .exrow.open { gap: 8px; padding: 10px 12px; }
+  .exbody { display: grid; gap: 8px; margin-top: 8px; }
+  .exbtn { background: none; border: 0; padding: 6px 0; font: inherit; color: var(--ink); text-align: left; cursor: pointer; min-height: 44px; }
+  .exbtn .chev { color: var(--accent); margin-left: 4px; }
+  .pill.tol { border-style: dashed; font-family: var(--f-body); font-weight: 600; }
   .marks button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .marks button[aria-pressed="true"][data-v="1"] { background: var(--warn); border-color: var(--warn); color: #fff; }
   .marks button[aria-pressed="true"][data-v="2"] { background: var(--label); border-color: var(--label); color: #fff; }
@@ -342,7 +347,7 @@ window.addEventListener('online', () => queueSync());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
 
 // ======================= UI state =======================
-const UI = { tab: 'today', day: today(), sid: null, q: '', testId: null, showArchived: false };
+const UI = { openEx: new Set(), tab: 'today', day: today(), sid: null, q: '', testId: null, showArchived: false };
 try { const t = sessionStorage.getItem('ihTab'); if (t) UI.tab = t; } catch (e) {}
 
 function render() {
@@ -565,10 +570,6 @@ function studentForm(s) {
 function testDef(t) { return FTG[t.kind] || []; }
 function exVariant(t, ex) { const m = (t.marks || {})[ex.id] || {}; return ex.v[Math.min(m.v || 0, ex.v.length - 1)] || ex.v[0]; }
 function exState(t, ex) { return (t.marks || {})[ex.id] || {}; }
-function suggested(m) {
-  const sev = Object.values(m.p || {}).concat(Object.values(m.fm || {})).filter(Boolean);
-  return sev.length ? Math.min.apply(null, sev) : 0;
-}
 function testResult(t) {
   const exs = testDef(t), T = TESTS[t.kind];
   let total = 0, marked = 0;
@@ -596,7 +597,7 @@ function testCardHTML(t) {
 function viewTests() {
   const tests = arr('tests').sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.u - a.u));
   return `<section class="panel"><div class="panel-head"><h2>Flight test marking</h2><button class="btn small primary" type="button" data-act="newTest">+ New marking sheet</button></div>
-    <p class="note">Mark a mock (pre-test) or an observed flight test against the Transport Canada flight test report. Each exercise shows the Performance Criteria from the Flight Test Guide as pills: tap once for a <b>minor</b> deviation, twice for <b>major</b>, three times for <b>critical</b>, four times to clear. The app suggests the mark from the weakest element; you choose the mark.</p>
+    <p class="note">Mark a mock (pre-test) or an observed flight test against the Transport Canada flight test report. Each exercise shows the Performance Criteria from the Flight Test Guide as pills: tap once for a <b>minor</b> deviation, twice for <b>major</b>, three times for <b>critical</b>, four times to clear. Each exercise is listed with the 1–4 scale beside it; tap the exercise to open its criteria.</p>
     <div class="list">${tests.map(testCardHTML).join('') || '<div class="empty">No marking sheets yet.</div>'}</div>
     <details class="sec" style="margin-top:14px"><summary><span class="sp">4-point marking scale</span></summary><div class="body scale">${SCALE.map(s => `<div><b>${s[0]} · ${s[1]}.</b> ${esc(s[2])}</div>`).join('')}
       <div><b>Deviations.</b> Minor: within the specified limit. Major: exceeds a limit, or repeated minor deviations without regaining stability. Critical: a major deviation that is repeated, excessive or uncorrected, or more than double the limit.</div>
@@ -618,19 +619,26 @@ function testSetupForm(t) {
     <div class="actions"><button class="btn primary" type="submit">${t.id ? 'Save' : 'Start marking'}</button><button class="btn" type="button" data-act="closeModal">Cancel</button>
     ${t.id ? '<button class="btn danger" type="button" data-act="delTest" data-confirm="Tap again to delete this sheet">Delete sheet</button>' : ''}</div></form>`;
 }
+const isTol = p => /±|\+\s?\d/.test(p.t + ' ' + p.f);
 function exRowHTML(t, ex) {
-  const m = exState(t, ex), v = exVariant(t, ex), sug = suggested(m), mk = m.m || 0;
-  const pills = v.pills.map((p, i) => { const s = (m.p || {})[i] || 0; return `<button type="button" class="pill ${s ? 's' + s : ''}" data-act="pill" data-ex="${ex.id}" data-i="${i}" title="${esc(p.f)}">${s ? '<b>' + SEV[s] + '</b>' : ''}${esc(p.t)}</button>`; }).join('');
+  const m = exState(t, ex), v = exVariant(t, ex), mk = m.m || 0, open = UI.openEx.has(ex.id);
+  // criteria with a ± / +x tolerance first; stored by original index so saved marks stay put
+  const order = v.pills.map((p, i) => i).sort((a, b) => (isTol(v.pills[b]) - isTol(v.pills[a])) || (a - b));
+  const pills = order.map(i => { const p = v.pills[i], s = (m.p || {})[i] || 0; return `<button type="button" class="pill ${s ? 's' + s : ''} ${isTol(p) ? 'tol' : ''}" data-act="pill" data-ex="${ex.id}" data-i="${i}" title="${esc(p.f)}">${s ? '<b>' + SEV[s] + '</b>' : ''}${esc(p.t)}</button>`; }).join('');
   const fm = FM.map((p, i) => { const s = (m.fm || {})[i] || 0; return `<button type="button" class="pill ${s ? 's' + s : ''}" data-act="fm" data-ex="${ex.id}" data-i="${i}">${s ? '<b>' + SEV[s] + '</b>' : ''}${esc(p)}</button>`; }).join('');
   const fmOn = Object.values(m.fm || {}).some(Boolean);
-  return `<div class="exrow ${mk ? 'm' + mk : ''}" id="ex_${ex.id.replace('.', '_')}">
-    <div class="exhead"><span class="exid">${esc(ex.id)}</span><span><span class="extitle">${esc(ex.title)}</span> ${ex.ground ? '<span class="tag plain">Ground</span>' : ''}${sug && sug !== mk ? ` <span class="tag lab">Suggests ${sug}</span>` : ''}</span>
-      <span class="marks" role="group" aria-label="Mark for ${esc(ex.id)}">${[1, 2, 3, 4].map(n => `<button type="button" data-act="mark" data-ex="${ex.id}" data-v="${n}" aria-pressed="${mk === n}" class="${!mk && sug === n ? 'sug' : ''}">${n}</button>`).join('')}</span></div>
+  const nDev = devLines(t, ex).length;
+  return `<div class="exrow ${mk ? 'm' + mk : ''} ${open ? 'open' : ''}" id="ex_${ex.id.replace('.', '_')}">
+    <div class="exhead"><span class="exid">${esc(ex.id)}</span>
+      <button type="button" class="exbtn" data-act="toggleEx" data-ex="${ex.id}" aria-expanded="${open}"><span class="extitle">${esc(ex.title)}</span> ${ex.ground ? '<span class="tag plain">Ground</span>' : ''}${nDev ? ` <span class="tag lab">${nDev} noted</span>` : ''}${m.r ? ' <span class="tag plain">Remark</span>' : ''}${m.ch ? ` <span class="tag plain">${esc(m.ch)}</span>` : ''} <span class="chev">${open ? '▾' : '▸'}</span></button>
+      <span class="marks" role="group" aria-label="Mark for ${esc(ex.id)}">${[1, 2, 3, 4].map(n => `<button type="button" data-act="mark" data-ex="${ex.id}" data-v="${n}" aria-pressed="${mk === n}">${n}</button>`).join('')}</span></div>
+    ${open ? `<div class="exbody">
     ${ex.v.length > 1 ? `<div class="seg sm" style="max-width:420px">${ex.v.map((x, i) => `<button type="button" data-act="variant" data-ex="${ex.id}" data-v="${i}" aria-pressed="${(m.v || 0) === i}">${esc(/soft/i.test(x.label) ? 'Soft field' : 'Short field')}</button>`).join('')}</div>` : ''}
     ${v.choices ? `<div class="exmore"><label class="lbl" for="ch_${ex.id}">Emergency</label><select class="in" id="ch_${ex.id}" data-ch="${ex.id}" style="width:auto;max-width:100%"><option value="">— select —</option>${v.choices.map(c => `<option ${c === m.ch ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
     <div class="pills">${pills}</div>
     <details class="fm" ${fmOn ? 'open' : ''}><summary>Flight management</summary><div class="pills">${fm}</div></details>
     <div class="exmore"><input class="in" data-rmk="${ex.id}" placeholder="Remarks" value="${esc(m.r)}" style="flex:1;min-width:200px"></div>
+    </div>` : ''}
   </div>`;
 }
 function viewTest(t) {
@@ -641,7 +649,8 @@ function viewTest(t) {
     <div><h2>${esc(T.name)}${t.integrated ? ' · Integrated' : ''}${t.partial ? ' · Partial' : ''}</h2>
       <div class="note" style="margin:2px 0 0">${esc([sName(t.sid), fmtDay(t.date), t.mode, t.aircraft, t.examiner].filter(Boolean).join(' · '))} · Performance criteria: ${esc(T.guide)}</div></div>
     <div class="ftsum" id="ftsum">${sumHTML(t, r)}</div>
-    <div class="legend"><span>Tap a pill:</span><span class="pill s3"><b>Minor</b>→3</span><span class="pill s2"><b>Major</b>→2</span><span class="pill s1"><b>Critical</b>→1</span><span>Long text? Hover or press-and-hold to read the full criterion.</span></div>
+    <div class="legend"><span>Tap an exercise to open its Performance Criteria. Tap a pill:</span><span class="pill s3"><b>Minor</b></span><span class="pill s2"><b>Major</b></span><span class="pill s1"><b>Critical</b></span><span>· tolerance items (±) are listed first.</span><span>Long text? Hover or press-and-hold to read the full criterion.</span></div>
+    <div class="actions"><button class="btn small" type="button" data-act="expandAll">Open all</button><button class="btn small" type="button" data-act="collapseAll">Close all</button></div>
     <div class="list" id="exlist">${testDef(t).map(ex => exRowHTML(t, ex)).join('')}</div>
     <div class="field"><label class="lbl" for="tnotes">General remarks</label><textarea class="in" id="tnotes" data-tnotes="1">${esc(t.notes)}</textarea></div>
   </section>`;
@@ -654,7 +663,7 @@ function sumHTML(t, r) {
 }
 function refreshEx(t, exId) {
   const ex = testDef(t).find(e => e.id === exId), el = $('ex_' + exId.replace('.', '_'));
-  if (ex && el) { const open = el.querySelector('details.fm') && el.querySelector('details.fm').open; el.outerHTML = exRowHTML(t, ex); if (open) $('ex_' + exId.replace('.', '_')).querySelector('details.fm').open = true; }
+  if (ex && el) { const open = el.querySelector('details.fm') && el.querySelector('details.fm').open; el.outerHTML = exRowHTML(t, ex); const nf = $('ex_' + exId.replace('.', '_')).querySelector('details.fm'); if (open && nf) nf.open = true; }
   $('ftsum').innerHTML = sumHTML(t, testResult(t));
 }
 function devLines(t, ex) {
@@ -782,8 +791,11 @@ document.addEventListener('click', e => {
       const s = student(b.dataset.sid || UI.sid) || activeStudents()[0];
       openModal('New marking sheet', testSetupForm({ sid: s.id, kind: s.program === 'CPL' ? 'cpl' : s.program === 'RPP' ? 'rpp' : 'ppl', date: today(), mode: 'Mock / pre-test' })); break;
     }
-    case 'openTest': UI.testId = id; UI.tab = 'tests'; render(); window.scrollTo(0, 0); break;
-    case 'backTests': UI.testId = null; render(); break;
+    case 'openTest': UI.openEx.clear(); UI.testId = id; UI.tab = 'tests'; render(); window.scrollTo(0, 0); break;
+    case 'backTests': UI.testId = null; UI.openEx.clear(); render(); break;
+    case 'toggleEx': { const x = b.dataset.ex; if (UI.openEx.has(x)) UI.openEx.delete(x); else UI.openEx.add(x); refreshEx(curTest(), x); break; }
+    case 'expandAll': testDef(curTest()).forEach(ex => UI.openEx.add(ex.id)); render(); break;
+    case 'collapseAll': UI.openEx.clear(); render(); break;
     case 'editTest': openModal('Sheet details', testSetupForm(curTest())); break;
     case 'delTest': { del('tests', $('testForm').dataset.id); UI.testId = null; closeModal(); render(); break; }
     case 'mark': { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[b.dataset.ex] = t.marks[b.dataset.ex] || {}; const v = +b.dataset.v; m.m = m.m === v ? 0 : v; saveTest(t); refreshEx(t, b.dataset.ex); break; }
