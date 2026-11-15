@@ -654,8 +654,7 @@ function tkCalc(tk) {
   if (isFinite(a) && isFinite(b)) { const d = (b - a + 1440) % 1440; air = Math.floor(d / 60) + ':' + pad(d % 60) + ' (' + (d / 60).toFixed(1) + ' h)'; }
   const hs = parseFloat(String(tk.hs || '').replace(',', '.')), he = parseFloat(String(tk.he || '').replace(',', '.'));
   const flt = isFinite(hs) && isFinite(he) && he >= hs ? (Math.round((he - hs) * 10) / 10).toFixed(1) + ' h' : '—';
-  const span = (x, y) => { const a1 = hm2min(x), b1 = hm2min(y); if (!isFinite(a1) || !isFinite(b1)) return '—'; const d = (b1 - a1 + 1440) % 1440; return Math.floor(d / 60) + ':' + pad(d % 60) + ' (' + (d / 60).toFixed(1) + ' h)'; };
-  return { air, flt, brief: span(tk.bs, tk.be) };
+  return { air, flt };
 }
 const tkResHTML = c => `<span>Air time <b>${esc(c.air)}</b></span><span>Flight time <b>${esc(c.flt)}</b></span>`;
 function tkHTML(t) {
@@ -667,10 +666,7 @@ function tkHTML(t) {
     <div class="kv"><label for="tk_he">HOBBS Stop</label><input class="in" id="tk_he" data-tk="he" inputmode="decimal" autocomplete="off" value="${esc(tk.he)}"></div>
     <div class="res" id="tkRes">${tkResHTML(c)}</div>
     <h4 class="sub">Ground Brief</h4>
-    <div class="kv"><label for="tk_bs">Brief Start</label><span class="pair"><input class="in" id="tk_bs" data-tk="bs" inputmode="numeric" maxlength="5" autocomplete="off" value="${esc(tk.bs)}"><button type="button" class="btn small" data-act="tkNow" data-v="bs">Now</button></span></div>
-    <div class="kv"><label for="tk_be">Brief End</label><span class="pair"><input class="in" id="tk_be" data-tk="be" inputmode="numeric" maxlength="5" autocomplete="off" value="${esc(tk.be)}"><button type="button" class="btn small" data-act="tkNow" data-v="be">Now</button></span></div>
-    <div class="kv" style="grid-column: span 2"><label for="tk_bn">Brief notes</label><input class="in" id="tk_bn" data-tk="bn" autocomplete="off" value="${esc(tk.bn)}" style="font-family:var(--f-body)"></div>
-    <div class="res" id="tkBrief"><span>Brief time <b>${esc(c.brief)}</b></span></div></div>`;
+    <div class="kv"><label for="tk_bh">Hours (decimal)</label><input class="in" id="tk_bh" data-tk="bh" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${esc(tk.bh)}"></div></div>`;
 }
 const isTol = p => /±|\+\s?\d/.test(p.t + ' ' + p.f);
 function exRowHTML(t, ex) {
@@ -731,7 +727,7 @@ function testText(t) {
   const L = [`${T.name} flight test${t.partial ? ' (partial)' : ''} — ${sName(t.sid)}`, `${fmtDay(t.date)} · ${t.mode || ''}${t.aircraft ? ' · ' + t.aircraft : ''}`, `Result: ${r.status}. ${r.detail}`, `Total ${r.total} / ${r.max}${t.partial ? '' : ' (pass mark ' + r.need + ')'}`];
   const tk = t.tk || {}, tc = tkCalc(tk);
   if (tk.hs || tk.he || tk.up || tk.down) L.push(`HOBBS ${tk.hs || '—'}–${tk.he || '—'} (${tc.flt}) · Time up ${tk.up || '—'} · Time down ${tk.down || '—'} · Air time ${tc.air}`);
-  if (tk.bs || tk.be) L.push(`Ground brief ${tk.bs || '—'}–${tk.be || '—'} · Brief time ${tc.brief}${tk.bn ? ' · ' + tk.bn : ''}`);
+  if (tk.bh) L.push(`Ground brief ${tk.bh} h`);
   L.push('');
   testDef(t).forEach(ex => {
     const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
@@ -750,7 +746,7 @@ function printTest(t) {
     <div class="sm">${t.mode && /mock/i.test(t.mode) ? 'Mock / pre-test assessment — not a Transport Canada form. ' : ''}Marked against TC form ${esc(T.form)} and Flight Test Guide ${esc(T.guide)}.</div>
     <div class="meta" style="margin-top:6pt"><div><b>Applicant:</b> ${esc(sName(t.sid))}</div><div><b>Date:</b> ${esc(fmtDay(t.date))}</div><div><b>Assessor:</b> ${esc(t.examiner || '')}</div><div><b>Location:</b> ${esc(t.loc || '')}</div>
     <div><b>HOBBS:</b> ${esc((t.tk || {}).hs || '')} – ${esc((t.tk || {}).he || '')} (${esc(tkCalc(t.tk).flt)})</div><div><b>Time up / down:</b> ${esc((t.tk || {}).up || '')} – ${esc((t.tk || {}).down || '')} · air ${esc(tkCalc(t.tk).air)}</div>
-    <div><b>Ground brief:</b> ${esc((t.tk || {}).bs || '')} – ${esc((t.tk || {}).be || '')} (${esc(tkCalc(t.tk).brief)})</div><div>${(t.tk || {}).bn ? '<b>Brief notes:</b> ' + esc(t.tk.bn) : ''}</div>
+    <div><b>Ground brief:</b> ${(t.tk || {}).bh ? esc(t.tk.bh) + ' h' : ''}</div><div></div>
     <div><b>Aircraft:</b> ${esc(t.aircraft || '')}</div><div><b>Test:</b> ${esc(T.short)}${t.integrated ? ' integrated' : ''}${t.partial ? ' · partial' : ''} · ${esc(t.mode || '')}</div><div><b>Weather:</b> ${esc(t.wx || '')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div></div>
     <table><tr><th style="width:9%">Ex.</th><th style="width:30%">Exercise</th><th class="c" style="width:7%">Mark</th><th>Remarks / deviations from the Performance Criteria</th></tr>
     ${testDef(t).map(ex => { const m = exState(t, ex), d = devLines(t, ex), v = exVariant(t, ex);
@@ -853,7 +849,7 @@ document.addEventListener('click', e => {
     }
     case 'openTest': UI.openEx.clear(); UI.testId = id; UI.tab = 'tests'; render(); window.scrollTo(0, 0); break;
     case 'backTests': UI.testId = null; UI.openEx.clear(); render(); break;
-    case 'tkNow': { const t = curTest(); t.tk = t.tk || {}; t.tk[b.dataset.v] = nowHM(); saveTest(t); $('tk_' + b.dataset.v).value = t.tk[b.dataset.v]; const c = tkCalc(t.tk); $('tkRes').innerHTML = tkResHTML(c); $('tkBrief').innerHTML = `<span>Brief time <b>${esc(c.brief)}</b></span>`; break; }
+    case 'tkNow': { const t = curTest(); t.tk = t.tk || {}; t.tk[b.dataset.v] = nowHM(); saveTest(t); $('tk_' + b.dataset.v).value = t.tk[b.dataset.v]; const c = tkCalc(t.tk); $('tkRes').innerHTML = tkResHTML(c); break; }
     case 'toggleEx': { const x = b.dataset.ex; if (UI.openEx.has(x)) UI.openEx.delete(x); else UI.openEx.add(x); refreshEx(curTest(), x); break; }
     case 'expandAll': testDef(curTest()).forEach(ex => UI.openEx.add(ex.id)); render(); break;
     case 'collapseAll': UI.openEx.clear(); render(); break;
@@ -905,7 +901,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'sq') { UI.q = el.value; const pos = el.selectionStart; render(); const n = $('sq'); n.focus(); n.setSelectionRange(pos, pos); }
   else if (el.dataset.set) { SET[el.dataset.set] = el.value; saveSet(); }
-  else if (el.dataset.tk) { const t = curTest(); t.tk = t.tk || {}; t.tk[el.dataset.tk] = el.value.trim(); saveTest(t); const c = tkCalc(t.tk); $('tkRes').innerHTML = tkResHTML(c); $('tkBrief').innerHTML = `<span>Brief time <b>${esc(c.brief)}</b></span>`; }
+  else if (el.dataset.tk) { const t = curTest(); t.tk = t.tk || {}; t.tk[el.dataset.tk] = el.value.trim(); saveTest(t); const c = tkCalc(t.tk); $('tkRes').innerHTML = tkResHTML(c); }
 });
 document.addEventListener('change', e => {
   const el = e.target;
@@ -913,7 +909,7 @@ document.addEventListener('change', e => {
   else if (el.id === 'showArch') { UI.showArchived = el.checked; render(); }
   else if (el.dataset.ch) { const t = curTest(); const m = t.marks[el.dataset.ch] = t.marks[el.dataset.ch] || {}; m.ch = el.value; saveTest(t); }
   else if (el.dataset.rmk) { const t = curTest(); t.marks = t.marks || {}; const m = t.marks[el.dataset.rmk] = t.marks[el.dataset.rmk] || {}; m.r = el.value.trim(); saveTest(t); }
-  else if (el.dataset.tk && ['up', 'down', 'bs', 'be'].includes(el.dataset.tk) && el.value) { const t = curTest(); el.value = fmtHM(el.value); t.tk[el.dataset.tk] = el.value; saveTest(t); }
+  else if (el.dataset.tk && ['up', 'down'].includes(el.dataset.tk) && el.value) { const t = curTest(); el.value = fmtHM(el.value); t.tk[el.dataset.tk] = el.value; saveTest(t); }
   else if (el.dataset.tnotes) { const t = curTest(); t.notes = el.value; saveTest(t); }
   else if (el.id === 'importFile' && el.files[0]) {
     const rd = new FileReader();
