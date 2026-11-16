@@ -246,6 +246,9 @@ const val = id => { const e = $(id); return e ? (e.type === 'checkbox' ? e.check
 
 // ======================= constants =======================
 const KINDS = ['Dual', 'Solo', 'Ground', 'Sim', 'Check ride', 'Flight test', 'Other'];
+// Flight Instructor Guide (TP 975) exercise numbers, short names for pills.
+const EXN = { 1: 'Familiarization', 2: 'A/C Familiarization & Prep', 3: 'Ancillary Controls', 4: 'Taxiing', 5: 'Attitudes & Movements', 6: 'Straight & Level', 7: 'Climbing', 8: 'Descending', 9: 'Turns', 10: 'Range & Endurance', 11: 'Slow FLT', 12: 'Stalls', 13: 'Spins', 14: 'Spiral Dives', 15: 'Slipping', 16: 'Take-off', 17: 'Circuit', 18: 'Approach & Landing', 19: 'First Solo', 20: 'Drift Illusions / Low Flying', 21: 'Precautionary Landing', 22: 'Forced Landing', 23: 'Pilot Navigation', 24: 'Instrument FLT', 25: 'Night FLT', 26: 'Seaplanes', 27: 'Skiplane', 28: 'Type Conversion', 29: 'Emergency Procedures' };
+const exLabel = n => { const k = String(n).trim().toUpperCase(), base = parseInt(k, 10); return k + ' ' + (EXN[base] || 'Exercise'); };
 const PROGRAMS = ['PPL', 'CPL', 'RPP', 'Instrument', 'Multi-engine', 'Instructor rating', 'Other'];
 const TESTS = {
   rpp: { name: 'Recreational Pilot Permit', short: 'RPP', form: '26-0495E', pass: 42, guide: 'TP 12475E (03/2021)' },
@@ -391,7 +394,7 @@ function itemCard(i, showName) {
     `<span class="dot ${pre.done ? 'y' : ''}">Brief</span>`, `<span class="dot ${deb.done ? 'y' : ''}">Debrief</span>`].join('');
   return `<button type="button" class="icard ${i.done ? 'done' : ''}" data-act="editItem" data-id="${i.id}">
     <span class="tm">${esc(i.time || '—')}</span>
-    <span><span class="tt">${showName ? esc(sName(i.sid)) + ' · ' : ''}${esc(i.title || i.kind)}</span><br><span class="sub">${esc([i.kind, i.aircraft, i.done ? 'Completed' : ''].filter(Boolean).join(' · '))}</span></span>
+    <span><span class="tt">${showName ? esc(sName(i.sid)) + ' · ' : ''}${esc(i.title || i.kind)}</span><br><span class="sub">${esc([i.kind, i.aircraft, (i.exs || []).length ? 'Ex ' + i.exs.join(', ') : '', i.done ? 'Completed' : ''].filter(Boolean).join(' · '))}</span></span>
     <span class="st">${st}</span></button>`;
 }
 function viewToday() {
@@ -466,16 +469,20 @@ function itemForm(i) {
       <div class="actions"><a class="btn small" href="${esc(SET.preflightUrl)}" target="_blank" rel="noopener">Open Preflight Briefing ↗</a><span class="note" style="margin:0">The student fills this in; their briefing comes back here.</span></div>
     </div></details>
 
-    <details class="sec" ${pre.done || pre.notes ? 'open' : ''}><summary><span class="sp">Pre-flight briefing</span>${pre.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
+    <details class="sec" ${pre.done || pre.notes || pre.obj || (i.exs || []).length ? 'open' : ''}><summary><span class="sp">Pre-flight briefing</span>${pre.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
       <div class="checks"><label><input type="checkbox" id="pr_pgi" ${pre.pgi ? 'checked' : ''}> PGI given (preparatory ground instruction)</label><label><input type="checkbox" id="pr_done" ${pre.done ? 'checked' : ''}> Pre-flight briefing done</label></div>
       ${ta('pr_obj', 'Objectives / sequence of exercises', pre.obj)}
+      <div class="field"><label class="lbl" for="pr_exn">Exercise</label>
+        <div class="actions" style="flex-wrap:nowrap"><input class="in num" id="pr_exn" inputmode="numeric" placeholder="e.g. 11" style="max-width:140px" autocomplete="off"><button class="btn small" type="button" data-act="exAdd">Add</button></div>
+        <div class="pills" id="exPills">${exPillsHTML()}</div></div>
       ${ta('pr_tem', 'Threats &amp; error management (weather, traffic, fatigue …)', pre.tem)}
       ${ta('pr_notes', 'Briefing notes', pre.notes)}
     </div></details>
 
     <details class="sec" ${i.inf ? 'open' : ''}><summary><span class="sp">In-flight notes</span>${i.inf ? '<span class="tag plain">Notes</span>' : ''}</summary><div class="body">
-      <div class="field"><label class="lbl" for="if_inf">Notes taken during the flight</label><textarea class="in" id="if_inf" style="min-height:160px" placeholder="Tap “Time stamp” to start a new timed line">${esc(i.inf)}</textarea></div>
-      <div class="actions"><button class="btn small" type="button" data-act="infStamp">+ Time stamp</button>${['Lookout', 'Checklist', 'Radio', 'Altitude', 'Airspeed', 'Heading', 'Trim', 'Good'].map(w => `<button class="btn small" type="button" data-act="infWord" data-v="${w}">${w}</button>`).join('')}</div>
+      <div class="field"><label class="lbl" for="if_inf">Notes taken during the flight</label><textarea class="in" id="if_inf" style="min-height:160px" placeholder="Exercises from the briefing appear here as headings. Tap a heading, then “Time stamp” to add a timed line under it.">${esc(i.inf)}</textarea></div>
+      <div class="actions" id="infHeads" style="margin-bottom:8px">${infHeadsHTML()}</div>
+      <div class="actions"><button class="btn small" type="button" data-act="infStamp">+ Time stamp</button>${['Lookout', 'Checklist', 'Radio', 'Altitude', 'Airspeed', 'Heading', 'Trim', 'Aileron usage', 'Review procedure', 'Good'].map(w => `<button class="btn small" type="button" data-act="infWord" data-v="${w}">${w}</button>`).join('')}</div>
     </div></details>
 
     <details class="sec" ${deb.done || deb.well || deb.rem ? 'open' : ''}><summary><span class="sp">Post-flight debrief</span>${deb.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
@@ -496,7 +503,25 @@ function itemForm(i) {
     </div>
   </form>`;
 }
-let curWB = null;
+let curWB = null, curExs = [];
+const HEAD = '▸ ';
+function exPillsHTML() { return curExs.map(n => `<button type="button" class="pill s3" data-act="exDel" data-v="${esc(n)}" title="Tap to remove"><b>${esc(String(n).toUpperCase())}</b>${esc(EXN[parseInt(n, 10)] || 'Exercise')} ×</button>`).join(''); }
+function infHeadsHTML() { return curExs.length ? '<span class="lbl" style="align-self:center">Go to</span>' + curExs.map(n => `<button class="btn small primary" type="button" data-act="infHead" data-v="${esc(n)}">${esc(exLabel(n))}</button>`).join('') : ''; }
+function insertAt(ta, text) { const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a; ta.value = ta.value.slice(0, a) + text + ta.value.slice(b); const p = a + text.length; ta.focus(); ta.setSelectionRange(p, p); }
+function ensureHead(n) {
+  const ta = $('if_inf'), h = HEAD + exLabel(n).toUpperCase();
+  if (!ta.value.split('\n').some(l => l.trim() === h)) ta.value = (ta.value.trim() ? ta.value.replace(/\s*$/, '') + '\n\n' : '') + h + '\n';
+  return h;
+}
+function gotoHead(n) {
+  const ta = $('if_inf'), h = ensureHead(n), lines = ta.value.split('\n');
+  const i = lines.findIndex(l => l.trim() === h); let j = i + 1;
+  while (j < lines.length && !lines[j].startsWith(HEAD)) j++;
+  while (j > i + 1 && lines[j - 1].trim() === '') j--;   // end of this block's text
+  const pos = lines.slice(0, j).join('\n').length;
+  ta.focus(); ta.setSelectionRange(pos, pos);
+}
+function refreshEx2() { $('exPills').innerHTML = exPillsHTML(); $('infHeads').innerHTML = infHeadsHTML(); }
 function wbHTML(wb) {
   if (!wb) return `<div class="wb"><div class="lbl">Weight and balance</div><div class="empty" style="padding:10px">No weight and balance yet — it comes from the student's Preflight Briefing.</div></div>`;
   const bad = /OUT/i.test(wb.result);
@@ -551,7 +576,7 @@ function applyBriefing(txt) {
   $('pf_paste').value = '';
 }
 function openItem(i) {
-  curWB = (i.pf && i.pf.wb) || null;
+  curWB = (i.pf && i.pf.wb) || null; curExs = (i.exs || []).slice();
   openModal(i.id ? 'Edit item' : 'New item', itemForm(i));
   const calc = () => { const a = parseFloat(val('pf_hobbsOut')), b = parseFloat(val('pf_hobbsIn')); $('pf_hobbs').textContent = isFinite(a) && isFinite(b) && b >= a ? (b - a).toFixed(1) + ' h' : '—'; };
   ['pf_hobbsOut', 'pf_hobbsIn'].forEach(id => $(id).addEventListener('input', calc)); calc();
@@ -564,7 +589,7 @@ function readItemForm() {
     id: id || uid(), sid: val('if_sid'), title: g('if_title'), date: val('if_date'), time: val('if_time'), kind: val('if_kind'), aircraft: val('if_ac'), done: val('if_done'),
     pf: { ap: g('pf_ap'), rwy: g('pf_rwy'), wind: g('pf_wind'), alt: g('pf_alt'), atis: g('pf_atis'), wb: curWB || null, perf: (old && old.pf && old.pf.perf) || '', fuelL: g('pf_fuelL'), fuelR: g('pf_fuelR'), oil: g('pf_oil'), hobbsOut: g('pf_hobbsOut'), hobbsIn: g('pf_hobbsIn'), up: val('pf_up'), down: val('pf_down'), metar: g('pf_metar'), notam: g('pf_notam') },
     pre: { pgi: val('pr_pgi'), done: val('pr_done'), obj: g('pr_obj'), tem: g('pr_tem'), notes: g('pr_notes') },
-    inf: val('if_inf'),
+    inf: val('if_inf'), exs: curExs.slice(),
     deb: { done: val('db_done'), well: g('db_well'), rem: g('db_rem'), study: g('db_study'), next: g('db_next') }
   });
 }
@@ -583,6 +608,7 @@ function itemText(i) {
   const hob = parseFloat(pf.hobbsIn) - parseFloat(pf.hobbsOut);
   if (isFinite(hob) && hob >= 0) L.push(`HOBBS ${pf.hobbsOut}–${pf.hobbsIn} (${hob.toFixed(1)} h)`);
   if (pf.wb) L.push(`W&B: ramp ${pf.wb.ramp || '—'} CG ${pf.wb.rampCg || '—'}, landing ${pf.wb.ldg || '—'} CG ${pf.wb.ldgCg || '—'} — ${pf.wb.result || ''}`);
+  if ((i.exs || []).length) L.push('', 'EXERCISES', i.exs.map(exLabel).join(', '));
   if (pre.obj) L.push('', 'OBJECTIVES', pre.obj);
   if (pre.tem) L.push('', 'THREATS & ERRORS', pre.tem);
   if (i.inf) L.push('', 'IN-FLIGHT NOTES', i.inf);
@@ -600,7 +626,7 @@ function printItem(i) {
   doPrint(`<h1>${esc(i.title || i.kind)}</h1>
     <div class="meta"><div><b>Student:</b> ${esc(s.name)}</div><div><b>Date:</b> ${esc(fmtDay(i.date))} ${esc(i.time || '')}</div><div><b>Type:</b> ${esc(i.kind)}</div><div><b>Aircraft:</b> ${esc(i.aircraft || '—')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div><div><b>Status:</b> ${i.done ? 'Completed' : 'Planned'}</div></div>
     <h2>Preflight</h2><table>${row('Airport / runway', [pf.ap, pf.rwy].filter(Boolean).join(' / '))}${row('Winds / altimeter', [pf.wind, pf.alt].filter(Boolean).join(' / '))}${row('ATIS', pf.atis)}${row('Weight & balance', pf.wb ? [pf.wb.ac, 'Ramp ' + (pf.wb.ramp || '—') + ' CG ' + (pf.wb.rampCg || '—'), 'Landing ' + (pf.wb.ldg || '—') + ' CG ' + (pf.wb.ldgCg || '—'), pf.wb.result, pf.wb.cat && pf.wb.cat + ' category'].filter(Boolean).join(' · ') : '')}${row('Fuel L / R · oil', [pf.fuelL, pf.fuelR].filter(Boolean).join(' / ') + (pf.oil ? ' gal · ' + pf.oil + ' qt' : ''))}${row('HOBBS', pf.hobbsOut || pf.hobbsIn ? `${pf.hobbsOut || ''} – ${pf.hobbsIn || ''}${isFinite(hob) && hob >= 0 ? ' (' + hob.toFixed(1) + ' h)' : ''}` : '')}${row('Time up / down', [pf.up, pf.down].filter(Boolean).join(' – '))}${row('METAR / TAF', pf.metar)}${row('NOTAM / notes', pf.notam)}</table>
-    <h2>Pre-flight briefing</h2><table>${row('Completed', [pre.pgi && 'PGI given', pre.done && 'Pre-flight briefing done'].filter(Boolean).join(' · ') || '—')}${row('Objectives', pre.obj)}${row('Threats & errors', pre.tem)}${row('Notes', pre.notes)}</table>
+    <h2>Pre-flight briefing</h2><table>${row('Completed', [pre.pgi && 'PGI given', pre.done && 'Pre-flight briefing done'].filter(Boolean).join(' · ') || '—')}${row('Exercises', (i.exs || []).map(exLabel).join(', '))}${row('Objectives', pre.obj)}${row('Threats & errors', pre.tem)}${row('Notes', pre.notes)}</table>
     ${i.inf ? `<h2>In-flight notes</h2><table>${row('Notes', i.inf)}</table>` : ''}
     <h2>Post-flight debrief</h2><table>${row('Completed', deb.done ? 'Debrief done' : '—')}${row('What went well', deb.well)}${row('Areas for remediation', deb.rem)}${row('Study assigned', deb.study)}${row('Plan for next lesson', deb.next)}</table>`);
 }
@@ -894,8 +920,16 @@ document.addEventListener('click', e => {
     }
     case 'editItem': openItem(D.items[id]); break;
     case 'now': $(b.dataset.v).value = nowHM(); break;
-    case 'infStamp': { const ta = $('if_inf'); ta.value = (ta.value && !ta.value.endsWith('\n') ? ta.value + '\n' : ta.value) + nowHM() + '  '; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); break; }
-    case 'infWord': { const ta = $('if_inf'); ta.value = (ta.value && !/[\s]$/.test(ta.value) ? ta.value + ' ' : ta.value) + b.dataset.v + ' '; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); break; }
+    case 'infStamp': { const ta = $('if_inf'), a = ta.selectionStart ?? ta.value.length; insertAt(ta, (a > 0 && ta.value[a - 1] !== '\n' ? '\n' : '') + nowHM() + '  '); break; }
+    case 'infWord': { const ta = $('if_inf'), a = ta.selectionStart ?? ta.value.length; insertAt(ta, (a > 0 && !/\s/.test(ta.value[a - 1]) ? ' ' : '') + b.dataset.v + ' '); break; }
+    case 'infHead': gotoHead(b.dataset.v); break;
+    case 'exAdd': {
+      const v = val('pr_exn').trim().toUpperCase().replace(/^EX\.?\s*/, '');
+      if (!/^\d{1,2}[A-Z]?(\.\d)?$/.test(v)) { toast('Enter an exercise number, e.g. 11'); break; }
+      if (!curExs.includes(v)) { curExs.push(v); ensureHead(v); }
+      $('pr_exn').value = ''; refreshEx2(); $('pr_exn').focus(); break;
+    }
+    case 'exDel': curExs = curExs.filter(x => x !== b.dataset.v); refreshEx2(); break;
     case 'pfImport': applyBriefing(val('pf_paste')); break;
     case 'wbClear': curWB = null; $('pf_wbBox').innerHTML = wbHTML(null); break;
     case 'dupItem': { const r = readItemForm(); openItem(Object.assign({}, r, { id: '', date: today(), done: false, pre: {}, deb: {}, pf: { ap: r.pf.ap } })); break; }
@@ -1000,7 +1034,8 @@ document.addEventListener('change', e => {
   }
 });
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'pr_exn' && e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-act="exAdd"]').click(); return; } if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
 
 // theme (same setting as the other tools)
 (function () {
