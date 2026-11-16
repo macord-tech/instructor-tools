@@ -245,7 +245,7 @@ const toast = t => { const el = $('toast'); el.textContent = t; el.hidden = fals
 const val = id => { const e = $(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : ''; };
 
 // ======================= constants =======================
-const KINDS = ['Flight', 'Solo', 'Ground', 'Sim', 'Check ride', 'Flight test', 'Other'];
+const KINDS = ['Dual', 'Solo', 'Ground', 'Sim', 'Check ride', 'Flight test', 'Other'];
 const PROGRAMS = ['PPL', 'CPL', 'RPP', 'Instrument', 'Multi-engine', 'Instructor rating', 'Other'];
 const TESTS = {
   rpp: { name: 'Recreational Pilot Permit', short: 'RPP', form: '26-0495E', pass: 42, guide: 'TP 12475E (03/2021)' },
@@ -282,6 +282,7 @@ const COLS = ['students', 'items', 'rems', 'tests'];
 let D = { students: {}, items: {}, rems: {}, tests: {}, deleted: {} };
 try { const d = JSON.parse(localStorage.getItem(DATA_KEY) || 'null'); if (d) D = Object.assign(D, d); } catch (e) {}
 COLS.concat('deleted').forEach(k => D[k] = D[k] || {});
+Object.values(D.items).forEach(i => { if (i.kind === 'Flight') i.kind = 'Dual'; });
 const persist = () => { try { localStorage.setItem(DATA_KEY, JSON.stringify(D)); } catch (e) { toast('Could not save on this device (storage full?)'); } };
 const put = (col, rec) => { rec.u = Date.now(); D[col][rec.id] = rec; persist(); queueSync(); return rec; };
 const del = (col, id) => { delete D[col][id]; D.deleted[id] = Date.now(); persist(); queueSync(); };
@@ -303,6 +304,7 @@ function merge(a, b) {
       out[c][id] = r;
     });
   });
+  Object.values(out.items).forEach(i => { if (i.kind === 'Flight') i.kind = 'Dual'; });
   // keep tombstones for 120 days
   const cut = Date.now() - 120 * 864e5;
   Object.keys(out.deleted).forEach(id => { if (out.deleted[id] < cut) delete out.deleted[id]; });
@@ -471,6 +473,11 @@ function itemForm(i) {
       ${ta('pr_notes', 'Briefing notes', pre.notes)}
     </div></details>
 
+    <details class="sec" ${i.inf ? 'open' : ''}><summary><span class="sp">In-flight notes</span>${i.inf ? '<span class="tag plain">Notes</span>' : ''}</summary><div class="body">
+      <div class="field"><label class="lbl" for="if_inf">Notes taken during the flight</label><textarea class="in" id="if_inf" style="min-height:160px" placeholder="Tap “Time stamp” to start a new timed line">${esc(i.inf)}</textarea></div>
+      <div class="actions"><button class="btn small" type="button" data-act="infStamp">+ Time stamp</button>${['Lookout', 'Checklist', 'Radio', 'Altitude', 'Airspeed', 'Heading', 'Trim', 'Good'].map(w => `<button class="btn small" type="button" data-act="infWord" data-v="${w}">${w}</button>`).join('')}</div>
+    </div></details>
+
     <details class="sec" ${deb.done || deb.well || deb.rem ? 'open' : ''}><summary><span class="sp">Post-flight debrief</span>${deb.done ? '<span class="tag ok">Done</span>' : ''}</summary><div class="body">
       <div class="checks"><label><input type="checkbox" id="db_done" ${deb.done ? 'checked' : ''}> Post-flight debrief done</label></div>
       ${ta('db_well', 'What went well', deb.well)}
@@ -557,6 +564,7 @@ function readItemForm() {
     id: id || uid(), sid: val('if_sid'), title: g('if_title'), date: val('if_date'), time: val('if_time'), kind: val('if_kind'), aircraft: val('if_ac'), done: val('if_done'),
     pf: { ap: g('pf_ap'), rwy: g('pf_rwy'), wind: g('pf_wind'), alt: g('pf_alt'), atis: g('pf_atis'), wb: curWB || null, perf: (old && old.pf && old.pf.perf) || '', fuelL: g('pf_fuelL'), fuelR: g('pf_fuelR'), oil: g('pf_oil'), hobbsOut: g('pf_hobbsOut'), hobbsIn: g('pf_hobbsIn'), up: val('pf_up'), down: val('pf_down'), metar: g('pf_metar'), notam: g('pf_notam') },
     pre: { pgi: val('pr_pgi'), done: val('pr_done'), obj: g('pr_obj'), tem: g('pr_tem'), notes: g('pr_notes') },
+    inf: val('if_inf'),
     deb: { done: val('db_done'), well: g('db_well'), rem: g('db_rem'), study: g('db_study'), next: g('db_next') }
   });
 }
@@ -577,6 +585,7 @@ function itemText(i) {
   if (pf.wb) L.push(`W&B: ramp ${pf.wb.ramp || '—'} CG ${pf.wb.rampCg || '—'}, landing ${pf.wb.ldg || '—'} CG ${pf.wb.ldgCg || '—'} — ${pf.wb.result || ''}`);
   if (pre.obj) L.push('', 'OBJECTIVES', pre.obj);
   if (pre.tem) L.push('', 'THREATS & ERRORS', pre.tem);
+  if (i.inf) L.push('', 'IN-FLIGHT NOTES', i.inf);
   if (deb.well) L.push('', 'WHAT WENT WELL', deb.well);
   if (deb.rem) L.push('', 'AREAS FOR REMEDIATION', deb.rem);
   if (deb.study) L.push('', 'STUDY ASSIGNED', deb.study);
@@ -592,6 +601,7 @@ function printItem(i) {
     <div class="meta"><div><b>Student:</b> ${esc(s.name)}</div><div><b>Date:</b> ${esc(fmtDay(i.date))} ${esc(i.time || '')}</div><div><b>Type:</b> ${esc(i.kind)}</div><div><b>Aircraft:</b> ${esc(i.aircraft || '—')}</div><div><b>Instructor:</b> ${esc(SET.instructor || '')}</div><div><b>Status:</b> ${i.done ? 'Completed' : 'Planned'}</div></div>
     <h2>Preflight</h2><table>${row('Airport / runway', [pf.ap, pf.rwy].filter(Boolean).join(' / '))}${row('Winds / altimeter', [pf.wind, pf.alt].filter(Boolean).join(' / '))}${row('ATIS', pf.atis)}${row('Weight & balance', pf.wb ? [pf.wb.ac, 'Ramp ' + (pf.wb.ramp || '—') + ' CG ' + (pf.wb.rampCg || '—'), 'Landing ' + (pf.wb.ldg || '—') + ' CG ' + (pf.wb.ldgCg || '—'), pf.wb.result, pf.wb.cat && pf.wb.cat + ' category'].filter(Boolean).join(' · ') : '')}${row('Fuel L / R · oil', [pf.fuelL, pf.fuelR].filter(Boolean).join(' / ') + (pf.oil ? ' gal · ' + pf.oil + ' qt' : ''))}${row('HOBBS', pf.hobbsOut || pf.hobbsIn ? `${pf.hobbsOut || ''} – ${pf.hobbsIn || ''}${isFinite(hob) && hob >= 0 ? ' (' + hob.toFixed(1) + ' h)' : ''}` : '')}${row('Time up / down', [pf.up, pf.down].filter(Boolean).join(' – '))}${row('METAR / TAF', pf.metar)}${row('NOTAM / notes', pf.notam)}</table>
     <h2>Pre-flight briefing</h2><table>${row('Completed', [pre.pgi && 'PGI given', pre.done && 'Pre-flight briefing done'].filter(Boolean).join(' · ') || '—')}${row('Objectives', pre.obj)}${row('Threats & errors', pre.tem)}${row('Notes', pre.notes)}</table>
+    ${i.inf ? `<h2>In-flight notes</h2><table>${row('Notes', i.inf)}</table>` : ''}
     <h2>Post-flight debrief</h2><table>${row('Completed', deb.done ? 'Debrief done' : '—')}${row('What went well', deb.well)}${row('Areas for remediation', deb.rem)}${row('Study assigned', deb.study)}${row('Plan for next lesson', deb.next)}</table>`);
 }
 function printDay() {
@@ -880,10 +890,12 @@ document.addEventListener('click', e => {
     case 'day': UI.day = b.dataset.v === '0' ? today() : addDays(UI.day, +b.dataset.v); render(); break;
     case 'newItem': {
       if (!activeStudents().length) { openModal('New student', studentForm({ program: 'PPL' })); break; }
-      openItem({ sid: b.dataset.sid || (UI.tab === 'students' && UI.sid) || activeStudents()[0].id, date: UI.tab === 'today' ? UI.day : today(), kind: 'Flight', aircraft: '' }); break;
+      openItem({ sid: b.dataset.sid || (UI.tab === 'students' && UI.sid) || activeStudents()[0].id, date: UI.tab === 'today' ? UI.day : today(), kind: 'Dual', aircraft: '' }); break;
     }
     case 'editItem': openItem(D.items[id]); break;
     case 'now': $(b.dataset.v).value = nowHM(); break;
+    case 'infStamp': { const ta = $('if_inf'); ta.value = (ta.value && !ta.value.endsWith('\n') ? ta.value + '\n' : ta.value) + nowHM() + '  '; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); break; }
+    case 'infWord': { const ta = $('if_inf'); ta.value = (ta.value && !/[\s]$/.test(ta.value) ? ta.value + ' ' : ta.value) + b.dataset.v + ' '; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); break; }
     case 'pfImport': applyBriefing(val('pf_paste')); break;
     case 'wbClear': curWB = null; $('pf_wbBox').innerHTML = wbHTML(null); break;
     case 'dupItem': { const r = readItemForm(); openItem(Object.assign({}, r, { id: '', date: today(), done: false, pre: {}, deb: {}, pf: { ap: r.pf.ap } })); break; }
@@ -894,7 +906,7 @@ document.addEventListener('click', e => {
       const r = readItemForm(); const d = val('db_nextDate');
       if (!d) { toast('Pick a date for the next lesson'); break; }
       if (!saveItem(r)) break;
-      put('items', { id: uid(), sid: r.sid, date: d, time: '', kind: r.kind === 'Ground' ? 'Ground' : 'Flight', aircraft: r.aircraft, title: (r.deb.next || '').split('\n')[0].slice(0, 80) || 'Next lesson', done: false, pf: { ap: r.pf.ap }, pre: { obj: r.deb.next || '' }, deb: {} });
+      put('items', { id: uid(), sid: r.sid, date: d, time: '', kind: r.kind === 'Ground' ? 'Ground' : r.kind, aircraft: r.aircraft, title: (r.deb.next || '').split('\n')[0].slice(0, 80) || 'Next lesson', done: false, pf: { ap: r.pf.ap }, pre: { obj: r.deb.next || '' }, deb: {} });
       closeModal(); render(); toast('Saved, and next lesson added for ' + fmtDay(d)); break;
     }
     case 'printDay': printDay(); break;
